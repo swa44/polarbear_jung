@@ -31,7 +31,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const handleLogin = async () => {
     setLoading(true)
     setError('')
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const fullEmail = email.includes('@') ? email : `${email}@pbjung.com`
+    const { error } = await supabase.auth.signInWithPassword({ email: fullEmail, password })
     setLoading(false)
     if (error) setError('아이디 또는 비밀번호가 올바르지 않습니다.')
   }
@@ -48,8 +49,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="w-full max-w-sm bg-white rounded-2xl border border-gray-100 p-6 flex flex-col gap-4">
           <h1 className="text-xl font-bold text-gray-900">관리자 로그인</h1>
           <input
-            type="email"
-            placeholder="아이디 (이메일)"
+            type="text"
+            placeholder="아이디"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
