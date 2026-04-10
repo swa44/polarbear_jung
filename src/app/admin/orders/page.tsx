@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect } from 'react'
 import { Order } from '@/types'
 import { formatPrice, formatDate, formatPhone, ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from '@/lib/utils'

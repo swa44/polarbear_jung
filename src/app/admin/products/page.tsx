@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect } from 'react'
 import { FrameColor, Module, EmbeddedBox } from '@/types'
 import { formatPrice } from '@/lib/utils'
