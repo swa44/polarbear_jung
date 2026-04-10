@@ -1,0 +1,260 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { Order } from '@/types'
+import { formatPrice, formatDate, formatPhone, ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from '@/lib/utils'
+import Badge from '@/components/ui/Badge'
+import Button from '@/components/ui/Button'
+import { Download, ChevronDown, ChevronUp } from 'lucide-react'
+
+const STATUS_FILTERS = [
+  { value: 'all', label: '전체' },
+  { value: 'pending', label: '접수됨' },
+  { value: 'confirmed', label: '확인됨' },
+  { value: 'shipped', label: '발송됨' },
+  { value: 'cancelled', label: '취소됨' },
+]
+
+export default function AdminOrdersPage() {
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [savingId, setSavingId] = useState<string | null>(null)
+
+  // Edit state
+  const [editMemo, setEditMemo] = useState<Record<string, string>>({})
+  const [editTracking, setEditTracking] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    fetchOrders()
+  }, [statusFilter])
+
+  const fetchOrders = async () => {
+    setLoading(true)
+    const res = await fetch(`/api/admin/orders?status=${statusFilter}`)
+    const data = await res.json()
+    if (data.orders) {
+      setOrders(data.orders)
+      const memos: Record<string, string> = {}
+      const trackings: Record<string, string> = {}
+      data.orders.forEach((o: Order) => {
+        memos[o.id] = o.admin_memo || ''
+        trackings[o.id] = o.tracking_number || ''
+      })
+      setEditMemo(memos)
+      setEditTracking(trackings)
+    }
+    setLoading(false)
+  }
+
+  const handleUpdateStatus = async (id: string, status: string) => {
+    setSavingId(id)
+    await fetch('/api/admin/orders', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status }),
+    })
+    await fetchOrders()
+    setSavingId(null)
+  }
+
+  const handleSaveMemo = async (id: string) => {
+    setSavingId(id)
+    await fetch('/api/admin/orders', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, admin_memo: editMemo[id], tracking_number: editTracking[id] }),
+    })
+    await fetchOrders()
+    setSavingId(null)
+  }
+
+  const handleShip = async (id: string) => {
+    if (!editTracking[id]?.trim()) {
+      alert('송장번호를 입력해주세요.')
+      return
+    }
+    setSavingId(id)
+    await fetch('/api/admin/orders', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status: 'shipped', tracking_number: editTracking[id] }),
+    })
+    await fetchOrders()
+    setSavingId(null)
+  }
+
+  const handleCsvDownload = () => {
+    window.open(`/api/admin/orders?status=${statusFilter}&format=csv`, '_blank')
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">주문 관리</h1>
+        <Button variant="secondary" size="sm" onClick={handleCsvDownload}>
+          <Download className="w-4 h-4 mr-1.5" />
+          CSV 다운로드
+        </Button>
+      </div>
+
+      {/* Status Filter */}
+      <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+        {STATUS_FILTERS.map(({ value, label }) => (
+          <button
+            key={value}
+            onClick={() => setStatusFilter(value)}
+            className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              statusFilter === value
+                ? 'bg-gray-900 text-white'
+                : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center h-48">
+          <div className="w-8 h-8 border-2 border-gray-900 border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : orders.length === 0 ? (
+        <div className="text-center text-gray-400 py-16">주문이 없습니다.</div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {orders.map((order) => {
+            const isExpanded = expandedId === order.id
+            return (
+              <div key={order.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                {/* Header */}
+                <div
+                  className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={() => setExpandedId(isExpanded ? null : order.id)}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-sm font-semibold text-gray-900">{order.order_number}</span>
+                        <Badge className={ORDER_STATUS_COLOR[order.status]}>{ORDER_STATUS_LABEL[order.status]}</Badge>
+                      </div>
+                      <p className="text-sm text-gray-700 mt-1">
+                        {order.customer_name} · {formatPhone(order.customer_phone)}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">{formatDate(order.created_at)}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-gray-900">{formatPrice(order.total_price)}</span>
+                      {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expanded */}
+                {isExpanded && (
+                  <div className="border-t border-gray-100 px-4 py-4 flex flex-col gap-4">
+                    {/* Order Items */}
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">주문 상품</p>
+                      {order.order_items?.map((item) => (
+                        <div key={item.id} className="text-sm py-2 border-b border-gray-100 last:border-0">
+                          <p className="font-medium text-gray-900">
+                            {item.gang_count}구 · {item.frame_color_name} × {item.quantity}개
+                          </p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {item.modules.map((m, i) => (
+                              <span key={i} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                                {i + 1}번: {m.module_name}
+                              </span>
+                            ))}
+                          </div>
+                          {item.embedded_box_name && (
+                            <p className="text-xs text-gray-400 mt-0.5">매립박스: {item.embedded_box_name}</p>
+                          )}
+                          <p className="text-xs text-gray-500 mt-1">{formatPrice(item.total_price)}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Shipping */}
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">배송지</p>
+                      <p className="text-sm text-gray-800">{order.shipping_address} {order.shipping_detail}</p>
+                    </div>
+
+                    {/* Tracking */}
+                    <div>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">송장번호</label>
+                      <div className="flex gap-2 mt-1">
+                        <input
+                          type="text"
+                          placeholder="송장번호 입력"
+                          value={editTracking[order.id] || ''}
+                          onChange={(e) => setEditTracking((prev) => ({ ...prev, [order.id]: e.target.value }))}
+                          className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-gray-900"
+                        />
+                        {order.status !== 'shipped' && (
+                          <Button
+                            size="sm"
+                            loading={savingId === order.id}
+                            onClick={() => handleShip(order.id)}
+                          >
+                            발송 처리
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Memo */}
+                    <div>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">내부 메모</label>
+                      <div className="flex gap-2 mt-1">
+                        <input
+                          type="text"
+                          placeholder="내부 메모 (고객에게 보이지 않음)"
+                          value={editMemo[order.id] || ''}
+                          onChange={(e) => setEditMemo((prev) => ({ ...prev, [order.id]: e.target.value }))}
+                          className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-gray-900"
+                        />
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          loading={savingId === order.id}
+                          onClick={() => handleSaveMemo(order.id)}
+                        >
+                          저장
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Status Actions */}
+                    {order.status === 'pending' && (
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          loading={savingId === order.id}
+                          onClick={() => handleUpdateStatus(order.id, 'confirmed')}
+                        >
+                          주문 확인
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          loading={savingId === order.id}
+                          onClick={() => handleUpdateStatus(order.id, 'cancelled')}
+                        >
+                          취소
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
