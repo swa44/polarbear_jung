@@ -33,7 +33,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       <header className="sticky top-0 z-40 bg-white border-b border-gray-100">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/build" className="text-xl font-bold text-gray-900 tracking-tight">
-            정스위치
+            융스위치
           </Link>
           <Link href="/cart" className="relative p-2">
             <ShoppingCart className="w-6 h-6 text-gray-700" />

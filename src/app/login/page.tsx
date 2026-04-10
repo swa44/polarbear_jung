@@ -70,7 +70,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">정스위치</h1>
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">융스위치</h1>
           <p className="mt-2 text-gray-500 text-sm">맞춤형 스위치 주문 서비스</p>
         </div>
 

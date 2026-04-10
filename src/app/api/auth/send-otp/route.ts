@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     if (error) throw error
 
     // SMS 발송
-    await sendSms(cleanPhone, `[정스위치] 인증번호: ${code} (5분 이내 입력)`)
+    await sendSms(cleanPhone, `[융스위치] 인증번호: ${code} (5분 이내 입력)`)
 
     return NextResponse.json({ success: true })
   } catch (e) {

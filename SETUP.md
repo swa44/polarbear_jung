@@ -1,4 +1,4 @@
-# 정스위치 - 셋업 가이드
+# 융스위치 - 셋업 가이드
 
 ## 1. Supabase 설정
 
@@ -43,7 +43,7 @@ cp .env.local.example .env.local
 ```bash
 git init
 git add .
-git commit -m "init: 정스위치 초기 설정"
+git commit -m "init: 융스위치 초기 설정"
 git remote add origin https://github.com/your-username/jungswitch.git
 git push -u origin main
 ```

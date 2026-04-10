@@ -88,7 +88,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="min-h-screen bg-gray-50">
       <header className="sticky top-0 z-40 bg-white border-b border-gray-100">
         <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-          <span className="font-bold text-gray-900">정스위치 관리자</span>
+          <span className="font-bold text-gray-900">융스위치 관리자</span>
           <div className="flex items-center gap-1">
             {navItems.map(({ href, icon: Icon, label }) => (
               <Link
