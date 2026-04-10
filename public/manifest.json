@@ -1,0 +1,21 @@
+{
+  "name": "폴라베어 맞춤형 융스위치 주문",
+  "short_name": "융스위치",
+  "description": "원하는 구성으로 스위치를 직접 설계하고 주문하세요.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#18181b",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
