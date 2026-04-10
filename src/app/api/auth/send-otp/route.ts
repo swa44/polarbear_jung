@@ -46,23 +46,24 @@ export async function POST(req: NextRequest) {
 }
 
 async function sendSms(phone: string, message: string): Promise<void> {
-  const apiKey = process.env.SMS_API_KEY
-  const sender = process.env.SMS_SENDER
+  const apiUrl = process.env.BIZGO_API_URL
+  const apiKey = process.env.BIZGO_API_KEY
+  const sender = process.env.SMS_SENDER_NUMBER
 
-  if (!apiKey || !sender) {
+  if (!apiUrl || !apiKey || !sender) {
     // 개발 환경: 콘솔 출력
     console.log(`[SMS Dev] To: ${phone}, Message: ${message}`)
     return
   }
 
-  await fetch('https://mars.ibapi.kr/api/comm/v1/send/omni', {
+  await fetch(apiUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `ApiKey ${apiKey}`,
+      Authorization: apiKey,
     },
     body: JSON.stringify({
-      messageFlow: [{ from: sender, text: message }],
+      messageFlow: [{ sms: { from: sender, text: message } }],
       destinations: [{ to: phone }],
     }),
   })

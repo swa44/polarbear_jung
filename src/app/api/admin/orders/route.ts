@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
-import { cookies } from 'next/headers'
 import { notifyShipped } from '@/lib/telegram'
 import { ORDER_STATUS_LABEL } from '@/lib/utils'
-
-function checkAdmin(cookieStore: Awaited<ReturnType<typeof cookies>>) {
-  return cookieStore.get('admin_session')?.value === 'true'
-}
+import { checkAdminAuth } from '@/lib/admin-auth'
 
 export async function GET(req: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    if (!checkAdmin(cookieStore)) {
+    if (!await checkAdminAuth()) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 401 })
     }
 
@@ -52,8 +47,7 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    if (!checkAdmin(cookieStore)) {
+    if (!await checkAdminAuth()) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 401 })
     }
 
