@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Order } from '@/types'
 import { formatPrice, formatDate, formatPhone, ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from '@/lib/utils'
 import Badge from '@/components/ui/Badge'
@@ -30,11 +30,7 @@ export default function AdminOrdersPage() {
   const [editTracking, setEditTracking] = useState<Record<string, string>>({})
   const [editTrackingCompany, setEditTrackingCompany] = useState<Record<string, string>>({})
 
-  useEffect(() => {
-    fetchOrders()
-  }, [statusFilter])
-
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     setLoading(true)
     const res = await fetch(`/api/admin/orders?status=${statusFilter}`)
     const data = await res.json()
@@ -54,7 +50,11 @@ export default function AdminOrdersPage() {
       setEditTrackingCompany(trackingCompanies)
     }
     setLoading(false)
-  }
+  }, [statusFilter])
+
+  useEffect(() => {
+    fetchOrders()
+  }, [fetchOrders])
 
   const handleUpdateStatus = async (id: string, status: string) => {
     setSavingId(id)
@@ -113,6 +113,16 @@ export default function AdminOrdersPage() {
     window.open(`/api/admin/orders?status=${statusFilter}&format=csv&ids=${ids}`, '_blank')
   }
 
+  const handlePickingCsvDownload = () => {
+    window.open(`/api/admin/orders?status=${statusFilter}&format=picking_csv`, '_blank')
+  }
+
+  const handleSelectedPickingCsvDownload = () => {
+    if (selectedOrderIds.length === 0) return
+    const ids = encodeURIComponent(selectedOrderIds.join(','))
+    window.open(`/api/admin/orders?status=${statusFilter}&format=picking_csv&ids=${ids}`, '_blank')
+  }
+
   const toggleOrderSelection = (id: string, checked: boolean) => {
     setSelectedOrderIds((prev) => {
       if (checked) return [...prev, id]
@@ -137,6 +147,19 @@ export default function AdminOrdersPage() {
           <Button variant="secondary" size="sm" onClick={handleCsvDownload}>
             <Download className="w-4 h-4 mr-1.5" />
             전체 CSV
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleSelectedPickingCsvDownload}
+            disabled={selectedOrderIds.length === 0}
+          >
+            <Download className="w-4 h-4 mr-1.5" />
+            선택 피킹 CSV ({selectedOrderIds.length})
+          </Button>
+          <Button variant="secondary" size="sm" onClick={handlePickingCsvDownload}>
+            <Download className="w-4 h-4 mr-1.5" />
+            전체 피킹 CSV
           </Button>
         </div>
       </div>
