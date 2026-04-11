@@ -209,16 +209,15 @@ export default function LoginPage() {
           ) : (
             <div className="flex flex-col gap-4">
               <div>
-                <p className="text-xs font-semibold tracking-[0.18em] text-gray-400 uppercase">
-                  First Save
-                </p>
                 <h2 className="text-lg font-semibold text-gray-900 mt-1">
                   이름 확인
                 </h2>
                 <p className="text-sm text-gray-500 mt-2 leading-relaxed">
-                  이 전화번호에는 처음 저장되는 이름입니다.
+                  이 전화번호로 처음 로그인시
                   <br />
-                  한 번 저장되면 이후 로그인 시 같은 이름으로 고정됩니다.
+                  저장되는 이름입니다.
+                  <br />
+                  이후 로그인시 같은 이름으로 고정됩니다.
                 </p>
               </div>
 

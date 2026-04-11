@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCartStore } from "@/store/cartStore";
 import { useSessionStore } from "@/store/sessionStore";
 import { LogOut, ShoppingCart, Package, Wrench } from "lucide-react";
+import {
+  clearStorefrontDataCache,
+  warmStorefrontData,
+} from "@/lib/storefront-data";
 
 export default function CustomerShell({
   children,
@@ -23,6 +27,13 @@ export default function CustomerShell({
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    warmStorefrontData();
+    router.prefetch("/build");
+    router.prefetch("/cart");
+    router.prefetch("/orders");
+  }, [router]);
+
   const navItems = [
     { href: "/build", icon: Wrench, label: "주문하기" },
     { href: "/cart", icon: ShoppingCart, label: "장바구니" },
@@ -33,8 +44,23 @@ export default function CustomerShell({
     await fetch("/api/auth/logout", { method: "POST" });
     clearSession();
     clearCart();
+    clearStorefrontDataCache();
     router.replace("/login");
     router.refresh();
+  };
+
+  const handleNavPrefetch = () => {
+    warmStorefrontData();
+    router.prefetch("/build");
+    router.prefetch("/cart");
+    router.prefetch("/orders");
+  };
+
+  const handleNavClick = (href: string) => {
+    if (pathname === href) return;
+    startTransition(() => {
+      router.push(href);
+    });
   };
 
   return (
@@ -43,12 +69,21 @@ export default function CustomerShell({
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
           <Link
             href="/build"
+            prefetch
+            onMouseEnter={handleNavPrefetch}
+            onTouchStart={handleNavPrefetch}
             className="text-xl font-bold text-gray-900 tracking-tight"
           >
             융스위치
           </Link>
           <div className="flex items-center gap-1">
-            <Link href="/cart" className="relative p-2">
+            <Link
+              href="/cart"
+              prefetch
+              onMouseEnter={handleNavPrefetch}
+              onTouchStart={handleNavPrefetch}
+              className="relative p-2"
+            >
               <ShoppingCart className="w-6 h-6 text-gray-700" />
               {mounted && cartCount() > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 bg-gray-900 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
@@ -77,6 +112,13 @@ export default function CustomerShell({
               <Link
                 key={href}
                 href={href}
+                prefetch
+                onMouseEnter={handleNavPrefetch}
+                onTouchStart={handleNavPrefetch}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNavClick(href);
+                }}
                 className={`flex flex-col items-center gap-1 py-3 text-xs font-medium transition-colors ${
                   isActive ? "text-gray-900" : "text-gray-400"
                 }`}

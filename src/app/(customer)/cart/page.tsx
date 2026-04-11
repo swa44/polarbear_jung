@@ -11,6 +11,7 @@ import { Trash2, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import OrderSummaryModal from "@/components/cart/OrderSummaryModal";
 import Image from "next/image";
+import { getStorefrontData } from "@/lib/storefront-data";
 
 declare global {
   interface Window {
@@ -48,10 +49,7 @@ export default function CartPage() {
   const [recipientError, setRecipientError] = useState("");
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/admin/settings").then((r) => r.json()),
-      fetch("/api/admin/products").then((r) => r.json()),
-    ]).then(([settingsData, productsData]) => {
+    getStorefrontData().then(({ settings: settingsData, products: productsData }) => {
       setShowPrice(settingsData.show_price === "true");
       const nextMap: Record<string, string | null> = {};
       for (const mod of productsData?.modules ?? []) {

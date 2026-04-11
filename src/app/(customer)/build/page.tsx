@@ -15,6 +15,7 @@ import ModuleSelector from "@/components/builder/ModuleSelector";
 import { Plus, ChevronDown } from "lucide-react";
 import Image from "next/image";
 import { v4 as uuidv4 } from "uuid";
+import { getStorefrontData } from "@/lib/storefront-data";
 
 interface ProductData {
   frame_colors: FrameColor[];
@@ -53,12 +54,8 @@ export default function BuildPage() {
 
   useEffect(() => {
     async function load() {
-      const [productsRes, settingsRes] = await Promise.all([
-        fetch("/api/admin/products"),
-        fetch("/api/admin/settings"),
-      ]);
-      const productsData = await productsRes.json();
-      const settingsData = await settingsRes.json();
+      const { products: productsData, settings: settingsData } =
+        await getStorefrontData();
 
       setProducts(productsData);
       setShowPrice(settingsData.show_price === "true");
