@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSessionStore } from "@/store/sessionStore";
 import Button from "@/components/ui/Button";
@@ -11,7 +11,10 @@ type Step = "info" | "otp" | "confirm";
 
 export default function LoginPage() {
   const router = useRouter();
+  const savedName = useSessionStore((s) => s.name);
+  const savedPhone = useSessionStore((s) => s.phone);
   const setSession = useSessionStore((s) => s.setSession);
+  const clearSession = useSessionStore((s) => s.clearSession);
 
   const [step, setStep] = useState<Step>("info");
   const [name, setName] = useState("");
@@ -21,6 +24,54 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [confirmName, setConfirmName] = useState("");
   const [editingConfirmName, setEditingConfirmName] = useState(false);
+  const [restoring, setRestoring] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const restoreSession = async () => {
+      if (!savedPhone) {
+        if (!cancelled) setRestoring(false);
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/auth/restore-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: savedPhone }),
+        });
+
+        if (!res.ok) {
+          clearSession();
+          if (!cancelled) {
+            setRestoring(false);
+            if (savedName) setName(savedName);
+            setPhone(savedPhone);
+          }
+          return;
+        }
+
+        const data = await res.json();
+        if (cancelled) return;
+        setSession(data.name, data.phone);
+        router.replace("/build");
+      } catch {
+        clearSession();
+        if (!cancelled) {
+          setRestoring(false);
+          if (savedName) setName(savedName);
+          setPhone(savedPhone);
+        }
+      }
+    };
+
+    restoreSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [clearSession, router, savedName, savedPhone, setSession]);
 
   const handleSendOtp = async () => {
     console.log("handleSendOtp 시작됨");
@@ -130,7 +181,19 @@ export default function LoginPage() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          {step === "info" ? (
+          {restoring ? (
+            <div className="flex flex-col items-center justify-center gap-4 py-10">
+              <div className="w-8 h-8 border-2 border-gray-900 border-t-transparent rounded-full animate-spin" />
+              <div className="text-center">
+                <p className="text-sm font-medium text-gray-900">
+                  로그인 상태 확인 중
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  저장된 로그인 정보를 불러오고 있습니다.
+                </p>
+              </div>
+            </div>
+          ) : step === "info" ? (
             <div className="flex flex-col gap-4">
               <h2 className="text-lg font-semibold text-gray-900">
                 주문자 정보 입력
