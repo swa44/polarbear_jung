@@ -43,7 +43,7 @@ export default function AdminOrdersPage() {
       data.orders.forEach((o: Order) => {
         memos[o.id] = o.admin_memo || ''
         trackings[o.id] = o.tracking_number || ''
-        trackingCompanies[o.id] = o.tracking_company || ''
+        trackingCompanies[o.id] = o.tracking_company || '로젠택배'
       })
       setEditMemo(memos)
       setEditTracking(trackings)
