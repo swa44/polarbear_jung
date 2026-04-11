@@ -4,7 +4,7 @@ import { Module, ModuleCategory } from '@/types'
 import { cn, formatPrice } from '@/lib/utils'
 import { X } from 'lucide-react'
 import Image from 'next/image'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface ModuleSelectorProps {
   open: boolean
@@ -26,8 +26,47 @@ export default function ModuleSelector({
   slotIndex,
 }: ModuleSelectorProps) {
   const [activeCategory, setActiveCategory] = useState<ModuleCategory>('스위치류')
+  const [isCategoryLoading, setIsCategoryLoading] = useState(false)
+  const loadedCategoryKeysRef = useRef<Set<string>>(new Set())
 
   const filtered = modules.filter((m) => m.category === activeCategory)
+  const categoryLoadKey = `${activeCategory}:${filtered.map((module) => `${module.id}:${module.image_url ?? 'no-image'}`).join('|')}`
+
+  useEffect(() => {
+    if (!open) return
+
+    const imageUrls = filtered
+      .map((module) => module.image_url)
+      .filter((src): src is string => Boolean(src))
+
+    if (imageUrls.length === 0 || loadedCategoryKeysRef.current.has(categoryLoadKey)) {
+      setIsCategoryLoading(false)
+      return
+    }
+
+    let cancelled = false
+    setIsCategoryLoading(true)
+
+    Promise.all(
+      imageUrls.map(
+        (src) =>
+          new Promise<void>((resolve) => {
+            const img = new window.Image()
+            img.onload = () => resolve()
+            img.onerror = () => resolve()
+            img.src = src
+          })
+      )
+    ).then(() => {
+      if (cancelled) return
+      loadedCategoryKeysRef.current.add(categoryLoadKey)
+      setIsCategoryLoading(false)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, categoryLoadKey, filtered])
 
   if (!open) return null
 
@@ -72,36 +111,45 @@ export default function ModuleSelector({
 
         {/* Module Grid */}
         <div className="px-4 pb-6 flex-1 overflow-y-auto">
-          <div className="grid grid-cols-3 gap-2">
-            {filtered.map((module) => (
-              <button
-                key={module.id}
-                onClick={() => onSelect(module)}
-                className="flex flex-col items-center gap-2 p-3 rounded-xl border-2 border-gray-200 bg-white hover:border-gray-900 hover:bg-gray-50 transition-all active:scale-95"
-              >
-                {module.image_url ? (
-                  <Image
-                    src={module.image_url}
-                    alt={module.name}
-                    width={56}
-                    height={56}
-                    className="object-cover w-12 h-12"
-                  />
-                ) : (
-                  <div className="w-12 h-12 bg-gray-100 flex items-center justify-center">
-                    <span className="text-xs text-gray-400">이미지 없음</span>
-                  </div>
-                )}
-                <span className="text-xs font-medium text-gray-800 text-center leading-tight">
-                  {module.name}
-                </span>
-                {showPrice && module.price > 0 && (
-                  <span className="text-xs text-gray-500">{formatPrice(module.price)}</span>
-                )}
-              </button>
-            ))}
-          </div>
-          {filtered.length === 0 && (
+          {isCategoryLoading ? (
+            <div className="flex h-full min-h-40 items-center justify-center">
+              <div className="flex flex-col items-center gap-3 text-gray-400">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-900 border-t-transparent" />
+                <p className="text-sm">모듈 이미지를 불러오는 중입니다.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {filtered.map((module) => (
+                <button
+                  key={module.id}
+                  onClick={() => onSelect(module)}
+                  className="flex flex-col items-center gap-3 p-4 rounded-xl border-2 border-gray-200 bg-white hover:border-gray-900 hover:bg-gray-50 transition-all active:scale-95"
+                >
+                  {module.image_url ? (
+                    <Image
+                      src={module.image_url}
+                      alt={module.name}
+                      width={72}
+                      height={72}
+                      className="object-cover w-16 h-16"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 bg-gray-100 flex items-center justify-center">
+                      <span className="text-xs text-gray-400">이미지 없음</span>
+                    </div>
+                  )}
+                  <span className="text-sm font-medium text-gray-800 text-center leading-tight">
+                    {module.name}
+                  </span>
+                  {showPrice && module.price > 0 && (
+                    <span className="text-xs text-gray-500">{formatPrice(module.price)}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+          {!isCategoryLoading && filtered.length === 0 && (
             <p className="text-center text-gray-400 text-sm py-8">선택 가능한 모듈이 없습니다.</p>
           )}
         </div>

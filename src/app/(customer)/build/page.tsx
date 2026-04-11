@@ -47,6 +47,9 @@ export default function BuildPage() {
 
   const [addedFeedback, setAddedFeedback] = useState(false);
   const [framePreviewFailed, setFramePreviewFailed] = useState(false);
+  const [boxListOpen, setBoxListOpen] = useState(false);
+  const [boxImagesLoading, setBoxImagesLoading] = useState(false);
+  const [boxImagesReady, setBoxImagesReady] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -81,6 +84,27 @@ export default function BuildPage() {
       });
     };
   }, []);
+
+  useEffect(() => {
+    if (!products?.frame_colors?.length) return;
+
+    const imageUrls = products.frame_colors
+      .filter((color) => color.is_active && Boolean(color.image_url))
+      .map((color) => color.image_url!)
+      .filter((src, index, arr) => arr.indexOf(src) === index);
+
+    const preloaded = imageUrls.map((src) => {
+      const img = new window.Image();
+      img.src = src;
+      return img;
+    });
+
+    return () => {
+      preloaded.forEach((img) => {
+        img.src = "";
+      });
+    };
+  }, [products]);
 
   useEffect(() => {
     setFramePreviewFailed(false);
@@ -154,7 +178,10 @@ export default function BuildPage() {
 
     if (colorTab === "metal") {
       const stainless = products.frame_colors.find(
-        (c) => c.material_type === "metal" && c.name === "스테인레스스틸" && c.is_active,
+        (c) =>
+          c.material_type === "metal" &&
+          c.name === "스테인레스스틸" &&
+          c.is_active,
       );
       if (stainless) {
         setSelectedColor(stainless);
@@ -178,6 +205,53 @@ export default function BuildPage() {
     if (m.max_gang !== null && m.max_gang !== gangCount) return false;
     return true;
   });
+
+  const activeBoxes =
+    products?.embedded_boxes.filter((box) => box.is_active) ?? [];
+
+  useEffect(() => {
+    if (!boxListOpen) return;
+
+    if (boxImagesReady) {
+      setBoxImagesLoading(false);
+      return;
+    }
+
+    const imageUrls = (products?.embedded_boxes ?? [])
+      .filter((box) => box.is_active)
+      .map((box) => box.image_url)
+      .filter((src): src is string => Boolean(src))
+      .filter((src, index, arr) => arr.indexOf(src) === index);
+
+    if (imageUrls.length === 0) {
+      setBoxImagesLoading(false);
+      setBoxImagesReady(true);
+      return;
+    }
+
+    let cancelled = false;
+    setBoxImagesLoading(true);
+
+    Promise.all(
+      imageUrls.map(
+        (src) =>
+          new Promise<void>((resolve) => {
+            const img = new window.Image();
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+            img.src = src;
+          }),
+      ),
+    ).then(() => {
+      if (cancelled) return;
+      setBoxImagesReady(true);
+      setBoxImagesLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [boxListOpen, boxImagesReady, products]);
 
   if (loading) {
     return (
@@ -365,57 +439,87 @@ export default function BuildPage() {
       <section>
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
           Step 4 · 매립박스{" "}
-          <span className="text-gray-400 normal-case font-normal">
-            (선택사항)
+          <span className="block text-gray-400 normal-case font-normal">
+            (미사용시 발생하는 사고에 대해 책임지지 않습니다.)
           </span>
         </h2>
         <div className="grid grid-cols-2 gap-2">
           <button
-            onClick={() => setSelectedBox(null)}
+            onClick={() => {
+              setSelectedBox(null);
+              setBoxListOpen(false);
+            }}
             className={cn(
-              "p-3 rounded-xl border-2 text-sm font-medium transition-all",
-              selectedBox === null
+              "py-2 rounded-xl border-2 text-sm font-medium transition-all",
+              !boxListOpen
                 ? "border-gray-900 bg-gray-900 text-white"
                 : "border-gray-200 bg-white text-gray-600 hover:border-gray-300",
             )}
           >
             선택 안함
           </button>
-          {products?.embedded_boxes
-            .filter((b) => b.is_active)
-            .map((box) => (
-              <button
-                key={box.id}
-                onClick={() => setSelectedBox(box)}
-                className={cn(
-                  "flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all",
-                  selectedBox?.id === box.id
-                    ? "border-gray-900 bg-gray-50"
-                    : "border-gray-200 bg-white hover:border-gray-300",
-                )}
-              >
-                {box.image_url ? (
-                  <Image
-                    src={box.image_url}
-                    alt={box.name}
-                    width={48}
-                    height={48}
-                    className="object-cover w-10 h-10"
-                  />
-                ) : (
-                  <div className="w-10 h-10 bg-gray-100" />
-                )}
-                <span className="text-xs font-medium text-gray-700 text-center leading-tight">
-                  {box.name}
-                </span>
-                {showPrice && box.price > 0 && (
-                  <span className="text-xs text-gray-500">
-                    {formatPrice(box.price)}
-                  </span>
-                )}
-              </button>
-            ))}
+          <button
+            onClick={() => setBoxListOpen(true)}
+            className={cn(
+              "py-2 rounded-xl border-2 text-sm font-medium transition-all",
+              boxListOpen
+                ? "border-gray-900 bg-gray-900 text-white"
+                : "border-gray-200 bg-white text-gray-600 hover:border-gray-300",
+            )}
+          >
+            선택함
+          </button>
         </div>
+
+        {boxListOpen && (
+          <div className="mt-2">
+            {boxImagesLoading ? (
+              <div className="flex min-h-40 items-center justify-center rounded-2xl border border-gray-200 bg-white">
+                <div className="flex flex-col items-center gap-3 text-gray-400">
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-900 border-t-transparent" />
+                  <p className="text-sm">
+                    매립박스 이미지를 불러오는 중입니다.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                {activeBoxes.map((box) => (
+                  <button
+                    key={box.id}
+                    onClick={() => setSelectedBox(box)}
+                    className={cn(
+                      "flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all",
+                      selectedBox?.id === box.id
+                        ? "border-gray-900 bg-gray-50"
+                        : "border-gray-200 bg-white hover:border-gray-300",
+                    )}
+                  >
+                    {box.image_url ? (
+                      <Image
+                        src={box.image_url}
+                        alt={box.name}
+                        width={48}
+                        height={48}
+                        className="object-cover w-10 h-10"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 bg-gray-100" />
+                    )}
+                    <span className="text-xs font-medium text-gray-700 text-center leading-tight">
+                      {box.name}
+                    </span>
+                    {showPrice && box.price > 0 && (
+                      <span className="text-xs text-gray-500">
+                        {formatPrice(box.price)}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       {/* 수량 & 담기 */}

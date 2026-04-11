@@ -1,138 +1,155 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { useCartStore } from '@/store/cartStore'
-import { useSessionStore } from '@/store/sessionStore'
-import { useRouter } from 'next/navigation'
-import { cn, formatPrice, getFrameColorPrice } from '@/lib/utils'
-import Button from '@/components/ui/Button'
-import Input from '@/components/ui/Input'
-import { Trash2, ShoppingBag } from 'lucide-react'
-import Link from 'next/link'
-import OrderSummaryModal from '@/components/cart/OrderSummaryModal'
-import Image from 'next/image'
+import { useState, useEffect } from "react";
+import { useCartStore } from "@/store/cartStore";
+import { useSessionStore } from "@/store/sessionStore";
+import { useRouter } from "next/navigation";
+import { cn, formatPrice, getFrameColorPrice } from "@/lib/utils";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import { Trash2, ShoppingBag } from "lucide-react";
+import Link from "next/link";
+import OrderSummaryModal from "@/components/cart/OrderSummaryModal";
+import Image from "next/image";
 
 declare global {
   interface Window {
     daum?: {
       Postcode: new (options: {
         oncomplete: (data: {
-          roadAddress: string
-          jibunAddress: string
-          bname: string
-          buildingName: string
-          apartment: 'Y' | 'N'
-          zonecode: string
-        }) => void
-      }) => { open: () => void }
-    }
+          roadAddress: string;
+          jibunAddress: string;
+          bname: string;
+          buildingName: string;
+          apartment: "Y" | "N";
+          zonecode: string;
+        }) => void;
+      }) => { open: () => void };
+    };
   }
 }
 
 export default function CartPage() {
-  const router = useRouter()
-  const { items, updateQuantity, removeItem, clearCart, totalPrice } = useCartStore()
-  const { name, phone } = useSessionStore()
+  const router = useRouter();
+  const { items, updateQuantity, removeItem, clearCart, totalPrice } =
+    useCartStore();
+  const { name, phone } = useSessionStore();
 
-  const [showPrice, setShowPrice] = useState(false)
-  const [moduleImageMap, setModuleImageMap] = useState<Record<string, string | null>>({})
-  const [postcodeReady, setPostcodeReady] = useState(false)
-  const [showSummary, setShowSummary] = useState(false)
-  const [shippingAddress, setShippingAddress] = useState('')
-  const [shippingDetail, setShippingDetail] = useState('')
-  const [addressError, setAddressError] = useState('')
+  const [showPrice, setShowPrice] = useState(false);
+  const [moduleImageMap, setModuleImageMap] = useState<
+    Record<string, string | null>
+  >({});
+  const [postcodeReady, setPostcodeReady] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  const [shippingAddress, setShippingAddress] = useState("");
+  const [shippingDetail, setShippingDetail] = useState("");
+  const [addressError, setAddressError] = useState("");
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/admin/settings').then((r) => r.json()),
-      fetch('/api/admin/products').then((r) => r.json()),
+      fetch("/api/admin/settings").then((r) => r.json()),
+      fetch("/api/admin/products").then((r) => r.json()),
     ]).then(([settingsData, productsData]) => {
-      setShowPrice(settingsData.show_price === 'true')
-      const nextMap: Record<string, string | null> = {}
+      setShowPrice(settingsData.show_price === "true");
+      const nextMap: Record<string, string | null> = {};
       for (const mod of productsData?.modules ?? []) {
-        nextMap[mod.id] = mod.image_url ?? null
+        nextMap[mod.id] = mod.image_url ?? null;
       }
-      setModuleImageMap(nextMap)
-    })
-  }, [])
+      setModuleImageMap(nextMap);
+    });
+  }, []);
 
   useEffect(() => {
     if (window.daum?.Postcode) {
-      setPostcodeReady(true)
-      return
+      setPostcodeReady(true);
+      return;
     }
 
-    const existingScript = document.getElementById('daum-postcode-script')
+    const existingScript = document.getElementById("daum-postcode-script");
     if (existingScript) {
-      const onLoad = () => setPostcodeReady(true)
-      existingScript.addEventListener('load', onLoad)
-      return () => existingScript.removeEventListener('load', onLoad)
+      const onLoad = () => setPostcodeReady(true);
+      existingScript.addEventListener("load", onLoad);
+      return () => existingScript.removeEventListener("load", onLoad);
     }
 
-    const script = document.createElement('script')
-    script.id = 'daum-postcode-script'
-    script.src = 'https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js'
-    script.async = true
-    script.onload = () => setPostcodeReady(true)
-    document.body.appendChild(script)
-  }, [])
+    const script = document.createElement("script");
+    script.id = "daum-postcode-script";
+    script.src =
+      "https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js";
+    script.async = true;
+    script.onload = () => setPostcodeReady(true);
+    document.body.appendChild(script);
+  }, []);
 
   const handleSearchAddress = () => {
     if (!window.daum?.Postcode) {
-      alert('주소 검색 스크립트를 불러오는 중입니다. 잠시 후 다시 시도해주세요.')
-      return
+      alert(
+        "주소 검색 스크립트를 불러오는 중입니다. 잠시 후 다시 시도해주세요.",
+      );
+      return;
     }
 
     new window.daum.Postcode({
       oncomplete: (data) => {
-        const baseAddress = data.roadAddress || data.jibunAddress
-        let extraAddress = ''
+        const baseAddress = data.roadAddress || data.jibunAddress;
+        let extraAddress = "";
 
         if (data.roadAddress) {
-          const extras = [data.bname, data.apartment === 'Y' ? data.buildingName : ''].filter(Boolean)
+          const extras = [
+            data.bname,
+            data.apartment === "Y" ? data.buildingName : "",
+          ].filter(Boolean);
           if (extras.length > 0) {
-            extraAddress = ` (${extras.join(', ')})`
+            extraAddress = ` (${extras.join(", ")})`;
           }
         }
 
-        setShippingAddress(`[${data.zonecode}] ${baseAddress}${extraAddress}`)
-        setAddressError('')
+        setShippingAddress(`[${data.zonecode}] ${baseAddress}${extraAddress}`);
+        setAddressError("");
       },
-    }).open()
-  }
+    }).open();
+  };
 
   const handleOrderClick = () => {
     if (!shippingAddress.trim()) {
-      setAddressError('배송지 주소를 입력해주세요.')
-      return
+      setAddressError("배송지 주소를 입력해주세요.");
+      return;
     }
-    setAddressError('')
-    setShowSummary(true)
-  }
+    setAddressError("");
+    setShowSummary(true);
+  };
 
   const handleConfirmOrder = async () => {
-    const res = await fetch('/api/orders', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cartItems: items, shippingAddress, shippingDetail }),
-    })
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.error)
+    const res = await fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cartItems: items,
+        shippingAddress,
+        shippingDetail,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
 
-    clearCart()
-    router.push(`/orders?new=${data.orderNumber}`)
-  }
+    clearCart();
+    router.push(`/orders?new=${data.orderNumber}`);
+  };
 
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 gap-4">
         <ShoppingBag className="w-16 h-16 text-gray-200" />
-        <p className="text-gray-500 text-center">장바구니가 비어있어요.<br />스위치를 구성해보세요.</p>
+        <p className="text-gray-500 text-center">
+          장바구니가 비어있어요.
+          <br />
+          스위치를 구성해보세요.
+        </p>
         <Link href="/build">
-          <Button>주문 제작하기</Button>
+          <Button>주문하러가기</Button>
         </Link>
       </div>
-    )
+    );
   }
 
   return (
@@ -147,12 +164,16 @@ export default function CartPage() {
       {/* Cart Items */}
       <div className="flex flex-col gap-3">
         {items.map((item) => {
-          const itemUnitPrice = getFrameColorPrice(item.frame_color, item.gang_count)
-            + item.modules.reduce((s, m) => s + m.module_price, 0)
-            + (item.embedded_box?.price ?? 0)
+          const itemUnitPrice =
+            getFrameColorPrice(item.frame_color, item.gang_count) +
+            item.modules.reduce((s, m) => s + m.module_price, 0) +
+            (item.embedded_box?.price ?? 0);
 
           return (
-            <div key={item.id} className="bg-white rounded-2xl border border-gray-100 p-4">
+            <div
+              key={item.id}
+              className="bg-white rounded-2xl border border-gray-100 p-4"
+            >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
                   <p className="font-semibold text-gray-900">
@@ -175,16 +196,23 @@ export default function CartPage() {
                         ) : (
                           <span className="w-14 h-14 bg-gray-200" />
                         )}
-                        <span className="text-center leading-tight">{m.module_name}</span>
+                        <span className="text-center leading-tight">
+                          {m.module_name}
+                        </span>
                       </div>
                     ))}
                   </div>
                   {item.embedded_box && (
-                    <p className="text-xs text-gray-500 mt-1">매립박스: {item.embedded_box.name}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      매립박스: {item.embedded_box.name}
+                    </p>
                   )}
                   {showPrice && (
                     <p className="text-sm text-gray-700 mt-2">
-                      {formatPrice(itemUnitPrice)} × {item.quantity} = <span className="font-semibold">{formatPrice(itemUnitPrice * item.quantity)}</span>
+                      {formatPrice(itemUnitPrice)} × {item.quantity} ={" "}
+                      <span className="font-semibold">
+                        {formatPrice(itemUnitPrice * item.quantity)}
+                      </span>
                     </p>
                   )}
                 </div>
@@ -206,7 +234,9 @@ export default function CartPage() {
                   >
                     −
                   </button>
-                  <span className="w-5 text-center text-sm font-semibold">{item.quantity}</span>
+                  <span className="w-5 text-center text-sm font-semibold">
+                    {item.quantity}
+                  </span>
                   <button
                     onClick={() => updateQuantity(item.id, item.quantity + 1)}
                     className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center text-sm font-bold"
@@ -216,7 +246,7 @@ export default function CartPage() {
                 </div>
               </div>
             </div>
-          )
+          );
         })}
       </div>
 
@@ -242,7 +272,7 @@ export default function CartPage() {
           onClick={handleSearchAddress}
           disabled={!postcodeReady}
         >
-          {postcodeReady ? '주소 찾기' : '주소 API 로딩중...'}
+          {postcodeReady ? "주소 찾기" : "주소 API 로딩중..."}
         </Button>
         <Input
           label="상세 주소 (선택)"
@@ -257,7 +287,9 @@ export default function CartPage() {
         {showPrice && (
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-500">총 주문 금액</span>
-            <span className="text-lg font-bold text-gray-900">{formatPrice(totalPrice())}</span>
+            <span className="text-lg font-bold text-gray-900">
+              {formatPrice(totalPrice())}
+            </span>
           </div>
         )}
         <p className="text-xs text-gray-400">
@@ -281,5 +313,5 @@ export default function CartPage() {
         />
       )}
     </div>
-  )
+  );
 }
