@@ -7,7 +7,7 @@ import { useSessionStore } from "@/store/sessionStore";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 
-type Step = "info" | "otp";
+type Step = "info" | "otp" | "confirm";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,6 +19,8 @@ export default function LoginPage() {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [confirmName, setConfirmName] = useState("");
+  const [editingConfirmName, setEditingConfirmName] = useState(false);
 
   const handleSendOtp = async () => {
     console.log("handleSendOtp 시작됨");
@@ -70,6 +72,39 @@ export default function LoginPage() {
           code: otp,
           name,
         }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      if (data.requiresNameConfirmation) {
+        setConfirmName(data.name);
+        setEditingConfirmName(false);
+        setStep("confirm");
+        return;
+      }
+
+      setSession(data.name, data.phone);
+      router.push("/build");
+    } catch (e: any) {
+      setError(e.message || "오류가 발생했습니다.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmName = async () => {
+    setError("");
+    const trimmedName = confirmName.trim();
+    if (!trimmedName) {
+      return setError("이름을 입력해주세요.");
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/confirm-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmedName }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -127,7 +162,7 @@ export default function LoginPage() {
                 인증번호 받기
               </Button>
             </div>
-          ) : (
+          ) : step === "otp" ? (
             <div className="flex flex-col gap-4">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">
@@ -170,6 +205,96 @@ export default function LoginPage() {
               >
                 번호 다시 입력
               </button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              <div>
+                <p className="text-xs font-semibold tracking-[0.18em] text-gray-400 uppercase">
+                  First Save
+                </p>
+                <h2 className="text-lg font-semibold text-gray-900 mt-1">
+                  이름 확인
+                </h2>
+                <p className="text-sm text-gray-500 mt-2 leading-relaxed">
+                  이 전화번호에는 처음 저장되는 이름입니다.
+                  <br />
+                  한 번 저장되면 이후 로그인 시 같은 이름으로 고정됩니다.
+                </p>
+              </div>
+
+              {editingConfirmName ? (
+                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                  <Input
+                    label="이름 수정"
+                    placeholder="홍길동"
+                    value={confirmName}
+                    onChange={(e) => setConfirmName(e.target.value)}
+                    autoFocus
+                  />
+                  <p className="mt-3 text-xs text-gray-400 leading-relaxed">
+                    실수로 잘못 입력했다면 여기서 수정 후 저장해주세요.
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-gray-200 bg-gradient-to-b from-gray-50 to-white px-5 py-5 text-center">
+                  <p className="text-xs font-medium tracking-[0.14em] text-gray-400 uppercase">
+                    Confirm Name
+                  </p>
+                  <p className="mt-3 text-2xl font-bold text-gray-900 tracking-tight">
+                    {confirmName}
+                  </p>
+                  <div className="mt-4 inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-500">
+                    이 이름으로 주문자 정보가 고정됩니다
+                  </div>
+                </div>
+              )}
+
+              {error && <p className="text-sm text-red-500">{error}</p>}
+
+              {editingConfirmName ? (
+                <>
+                  <Button
+                    onClick={handleConfirmName}
+                    loading={loading}
+                    fullWidth
+                    size="lg"
+                    className="mt-1"
+                  >
+                    이 이름으로 저장
+                  </Button>
+                  <button
+                    onClick={() => {
+                      setEditingConfirmName(false);
+                      setError("");
+                    }}
+                    className="text-sm text-gray-500 underline text-center"
+                  >
+                    다시 확인하기
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    onClick={handleConfirmName}
+                    loading={loading}
+                    fullWidth
+                    size="lg"
+                    className="mt-1"
+                  >
+                    예, 맞습니다
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setEditingConfirmName(true);
+                      setError("");
+                    }}
+                    variant="secondary"
+                    fullWidth
+                  >
+                    아니요, 수정하겠습니다
+                  </Button>
+                </>
+              )}
             </div>
           )}
         </div>

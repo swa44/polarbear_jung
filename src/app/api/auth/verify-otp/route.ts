@@ -34,9 +34,43 @@ export async function POST(req: NextRequest) {
       .update({ verified: true })
       .eq('id', otp.id)
 
+    const trimmedName = name.trim()
+    let fixedName = trimmedName
+
+    const { data: existingProfile, error: profileReadError } = await supabase
+      .from('customer_profiles')
+      .select('name')
+      .eq('phone', cleanPhone)
+      .maybeSingle()
+
+    if (profileReadError) throw profileReadError
+
+    if (existingProfile?.name) {
+      fixedName = existingProfile.name
+    } else {
+      const cookieStore = await cookies()
+      cookieStore.set(
+        'pending_customer_profile',
+        JSON.stringify({ phone: cleanPhone, name: trimmedName }),
+        {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 60 * 10,
+          path: '/',
+        }
+      )
+
+      return NextResponse.json({
+        requiresNameConfirmation: true,
+        name: trimmedName,
+        phone: cleanPhone,
+      })
+    }
+
     // 세션 쿠키 저장
     const cookieStore = await cookies()
-    const sessionData = JSON.stringify({ name, phone: cleanPhone })
+    const sessionData = JSON.stringify({ name: fixedName, phone: cleanPhone })
     cookieStore.set('customer_session', sessionData, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -45,7 +79,7 @@ export async function POST(req: NextRequest) {
       path: '/',
     })
 
-    return NextResponse.json({ success: true, name, phone: cleanPhone })
+    return NextResponse.json({ success: true, name: fixedName, phone: cleanPhone })
   } catch (e) {
     console.error(e)
     return NextResponse.json({ error: '인증에 실패했습니다.' }, { status: 500 })

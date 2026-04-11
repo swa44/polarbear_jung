@@ -23,6 +23,7 @@ type OrderForExport = {
   created_at: string
   customer_name: string
   customer_phone: string
+  recipient_name: string | null
   shipping_address: string
   shipping_detail: string | null
   status: string
@@ -139,7 +140,7 @@ export async function PATCH(req: NextRequest) {
 function generateCsv(orders: OrderForExport[]): string {
   const BOM = '\uFEFF'
   const headers = [
-    '주문번호', '주문일시', '고객명', '연락처', '배송지', '상세주소',
+    '주문번호', '주문일시', '고객명', '연락처', '수신인', '배송지', '상세주소',
     '상태', '합계금액', '택배사', '송장번호', '상품내역',
   ]
 
@@ -156,6 +157,7 @@ function generateCsv(orders: OrderForExport[]): string {
       new Date(o.created_at).toLocaleString('ko-KR'),
       o.customer_name,
       o.customer_phone,
+      o.recipient_name || o.customer_name,
       o.shipping_address,
       o.shipping_detail || '',
       ORDER_STATUS_LABEL[o.status] || o.status,

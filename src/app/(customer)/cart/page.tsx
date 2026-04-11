@@ -33,7 +33,7 @@ export default function CartPage() {
   const router = useRouter();
   const { items, updateQuantity, removeItem, clearCart, totalPrice } =
     useCartStore();
-  const { name, phone } = useSessionStore();
+  const customerName = useSessionStore((s) => s.name);
 
   const [showPrice, setShowPrice] = useState(false);
   const [moduleImageMap, setModuleImageMap] = useState<
@@ -41,9 +41,11 @@ export default function CartPage() {
   >({});
   const [postcodeReady, setPostcodeReady] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [recipientName, setRecipientName] = useState("");
   const [shippingAddress, setShippingAddress] = useState("");
   const [shippingDetail, setShippingDetail] = useState("");
   const [addressError, setAddressError] = useState("");
+  const [recipientError, setRecipientError] = useState("");
 
   useEffect(() => {
     Promise.all([
@@ -58,6 +60,12 @@ export default function CartPage() {
       setModuleImageMap(nextMap);
     });
   }, []);
+
+  useEffect(() => {
+    if (customerName && !recipientName.trim()) {
+      setRecipientName(customerName);
+    }
+  }, [customerName, recipientName]);
 
   useEffect(() => {
     if (window.daum?.Postcode) {
@@ -111,6 +119,12 @@ export default function CartPage() {
   };
 
   const handleOrderClick = () => {
+    if (!recipientName.trim()) {
+      setRecipientError("수신인 이름을 입력해주세요.");
+      return;
+    }
+    setRecipientError("");
+
     if (!shippingAddress.trim()) {
       setAddressError("배송지 주소를 입력해주세요.");
       return;
@@ -125,6 +139,7 @@ export default function CartPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         cartItems: items,
+        recipientName,
         shippingAddress,
         shippingDetail,
       }),
@@ -259,21 +274,28 @@ export default function CartPage() {
 
       {/* 배송지 */}
       <div className="bg-white rounded-2xl border border-gray-100 p-4 flex flex-col gap-3">
-        <h2 className="font-semibold text-gray-900">배송지 정보</h2>
+        <h2 className="font-semibold text-gray-900">배송 정보</h2>
+        <Input
+          label="수신인"
+          placeholder="수신인 이름을 입력해주세요"
+          value={recipientName}
+          onChange={(e) => {
+            setRecipientName(e.target.value);
+            setRecipientError("");
+          }}
+          error={recipientError}
+        />
         <Input
           label="주소"
-          placeholder="도로명 주소를 입력해주세요"
+          placeholder="클릭하여 주소를 검색해주세요"
           value={shippingAddress}
-          onChange={(e) => setShippingAddress(e.target.value)}
+          onClick={handleSearchAddress}
+          onChange={() => {}}
+          readOnly
+          disabled={!postcodeReady}
+          className="cursor-pointer"
           error={addressError}
         />
-        <Button
-          variant="secondary"
-          onClick={handleSearchAddress}
-          disabled={!postcodeReady}
-        >
-          {postcodeReady ? "주소 찾기" : "주소 API 로딩중..."}
-        </Button>
         <Input
           label="상세 주소 (선택)"
           placeholder="동/호수, 건물명 등"
@@ -304,6 +326,7 @@ export default function CartPage() {
       {showSummary && (
         <OrderSummaryModal
           items={items}
+          recipientName={recipientName}
           shippingAddress={shippingAddress}
           shippingDetail={shippingDetail}
           totalPrice={totalPrice()}

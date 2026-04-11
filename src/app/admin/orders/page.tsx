@@ -254,6 +254,7 @@ export default function AdminOrdersPage() {
                     {/* Shipping */}
                     <div>
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">배송지</p>
+                      <p className="text-sm text-gray-700 mb-1">수신인: {order.recipient_name || order.customer_name}</p>
                       <p className="text-sm text-gray-800">{order.shipping_address} {order.shipping_detail}</p>
                     </div>
 

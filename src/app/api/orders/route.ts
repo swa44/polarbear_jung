@@ -47,13 +47,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
     }
 
-    const { cartItems, shippingAddress, shippingDetail } = await req.json() as {
+    const { cartItems, recipientName, shippingAddress, shippingDetail } = await req.json() as {
       cartItems: CartItem[]
+      recipientName?: string
       shippingAddress: string
       shippingDetail?: string
     }
 
-    if (!cartItems?.length || !shippingAddress) {
+    if (!cartItems?.length || !shippingAddress || !recipientName?.trim()) {
       return NextResponse.json({ error: '필수 정보가 누락되었습니다.' }, { status: 400 })
     }
 
@@ -75,6 +76,7 @@ export async function POST(req: NextRequest) {
         order_number: orderNumber,
         customer_name: session.name,
         customer_phone: session.phone,
+        recipient_name: recipientName.trim(),
         shipping_address: shippingAddress,
         shipping_detail: shippingDetail || null,
         total_price: totalPrice,

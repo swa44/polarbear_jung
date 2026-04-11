@@ -13,6 +13,14 @@ CREATE TABLE otp_verifications (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- 고객 프로필 테이블
+CREATE TABLE customer_profiles (
+  phone TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
 -- 프레임 색상 테이블
 CREATE TABLE frame_colors (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -61,6 +69,7 @@ CREATE TABLE orders (
   order_number TEXT NOT NULL UNIQUE,
   customer_name TEXT NOT NULL,
   customer_phone TEXT NOT NULL,
+  recipient_name TEXT,
   shipping_address TEXT NOT NULL,
   shipping_detail TEXT,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'shipped', 'cancelled')),
@@ -143,6 +152,7 @@ INSERT INTO embedded_boxes (name, price, sort_order) VALUES
 -- =============================================
 
 ALTER TABLE otp_verifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customer_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE frame_colors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE modules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE embedded_boxes ENABLE ROW LEVEL SECURITY;
@@ -160,6 +170,7 @@ CREATE POLICY "settings_public_read" ON settings FOR SELECT USING (true);
 CREATE POLICY "orders_service_all" ON orders FOR ALL USING (true);
 CREATE POLICY "order_items_service_all" ON order_items FOR ALL USING (true);
 CREATE POLICY "otp_service_all" ON otp_verifications FOR ALL USING (true);
+CREATE POLICY "customer_profiles_service_all" ON customer_profiles FOR ALL USING (true);
 
 -- =============================================
 -- 트리거: updated_at 자동 갱신
@@ -175,4 +186,8 @@ $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER orders_updated_at
   BEFORE UPDATE ON orders
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER customer_profiles_updated_at
+  BEFORE UPDATE ON customer_profiles
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();

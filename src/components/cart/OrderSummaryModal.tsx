@@ -8,6 +8,7 @@ import { X } from 'lucide-react'
 
 interface Props {
   items: CartItem[]
+  recipientName: string
   shippingAddress: string
   shippingDetail: string
   totalPrice: number
@@ -18,6 +19,7 @@ interface Props {
 
 export default function OrderSummaryModal({
   items,
+  recipientName,
   shippingAddress,
   shippingDetail,
   totalPrice,
@@ -65,6 +67,11 @@ export default function OrderSummaryModal({
                 )}
               </div>
             ))}
+          </div>
+
+          <div>
+            <p className="text-xs font-medium text-gray-500 mb-1">수신인</p>
+            <p className="text-sm text-gray-800">{recipientName}</p>
           </div>
 
           <div>

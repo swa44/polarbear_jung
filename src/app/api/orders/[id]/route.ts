@@ -41,10 +41,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: '이미 처리된 주문은 수정할 수 없습니다.' }, { status: 400 })
     }
 
-    const { cartItems, shippingAddress, shippingDetail } = await req.json() as {
+    const { cartItems, recipientName, shippingAddress, shippingDetail } = await req.json() as {
       cartItems: CartItem[]
+      recipientName?: string
       shippingAddress: string
       shippingDetail?: string
+    }
+
+    if (!cartItems?.length || !shippingAddress || !recipientName?.trim()) {
+      return NextResponse.json({ error: '필수 정보가 누락되었습니다.' }, { status: 400 })
     }
 
     const totalPrice = cartItems.reduce((sum, item) => {
@@ -81,7 +86,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     await supabase.from('order_items').insert(items)
     await supabase
       .from('orders')
-      .update({ shipping_address: shippingAddress, shipping_detail: shippingDetail || null, total_price: totalPrice })
+      .update({
+        recipient_name: recipientName.trim(),
+        shipping_address: shippingAddress,
+        shipping_detail: shippingDetail || null,
+        total_price: totalPrice,
+      })
       .eq('id', id)
 
     return NextResponse.json({ success: true })

@@ -62,6 +62,7 @@ export interface Order {
   order_number: string
   customer_name: string
   customer_phone: string
+  recipient_name: string | null
   shipping_address: string
   shipping_detail: string | null
   status: OrderStatus

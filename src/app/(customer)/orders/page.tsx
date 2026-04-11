@@ -132,6 +132,8 @@ function OrdersContent() {
 
                     {/* Shipping */}
                     <div className="pt-2 border-t border-gray-100">
+                      <p className="text-xs text-gray-500">수신인</p>
+                      <p className="text-sm text-gray-800">{order.recipient_name || order.customer_name}</p>
                       <p className="text-xs text-gray-500">배송지</p>
                       <p className="text-sm text-gray-800">{order.shipping_address} {order.shipping_detail}</p>
                     </div>
