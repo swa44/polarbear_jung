@@ -68,6 +68,21 @@ export default function BuildPage() {
   }, []);
 
   useEffect(() => {
+    const imageUrls = [1, 2, 3, 4, 5].map((n) => `/frames/gang-${n}.png`);
+    const preloaded = imageUrls.map((src) => {
+      const img = new window.Image();
+      img.src = src;
+      return img;
+    });
+
+    return () => {
+      preloaded.forEach((img) => {
+        img.src = "";
+      });
+    };
+  }, []);
+
+  useEffect(() => {
     setFramePreviewFailed(false);
   }, [gangCount]);
 
