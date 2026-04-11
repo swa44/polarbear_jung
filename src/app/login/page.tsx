@@ -11,6 +11,7 @@ type Step = "info" | "otp" | "confirm";
 
 export default function LoginPage() {
   const router = useRouter();
+  const hydrated = useSessionStore((s) => s.hydrated);
   const savedName = useSessionStore((s) => s.name);
   const savedPhone = useSessionStore((s) => s.phone);
   const setSession = useSessionStore((s) => s.setSession);
@@ -30,6 +31,10 @@ export default function LoginPage() {
     let cancelled = false;
 
     const restoreSession = async () => {
+      if (!hydrated) {
+        return;
+      }
+
       if (!savedPhone) {
         if (!cancelled) setRestoring(false);
         return;
@@ -71,7 +76,7 @@ export default function LoginPage() {
     return () => {
       cancelled = true;
     };
-  }, [clearSession, router, savedName, savedPhone, setSession]);
+  }, [clearSession, hydrated, router, savedName, savedPhone, setSession]);
 
   const handleSendOtp = async () => {
     console.log("handleSendOtp 시작됨");
