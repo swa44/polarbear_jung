@@ -119,6 +119,7 @@ export default function LoginPage() {
       return setError("인증번호 6자리를 입력해주세요.");
 
     setLoading(true);
+    let shouldUnlock = true;
     try {
       const res = await fetch("/api/auth/verify-otp", {
         method: "POST",
@@ -140,11 +141,14 @@ export default function LoginPage() {
       }
 
       setSession(data.name, data.phone);
+      shouldUnlock = false;
       router.push("/build");
     } catch (e: any) {
       setError(e.message || "오류가 발생했습니다.");
     } finally {
-      setLoading(false);
+      if (shouldUnlock) {
+        setLoading(false);
+      }
     }
   };
 
@@ -156,6 +160,7 @@ export default function LoginPage() {
     }
 
     setLoading(true);
+    let shouldUnlock = true;
     try {
       const res = await fetch("/api/auth/confirm-profile", {
         method: "POST",
@@ -166,11 +171,14 @@ export default function LoginPage() {
       if (!res.ok) throw new Error(data.error);
 
       setSession(data.name, data.phone);
+      shouldUnlock = false;
       router.push("/build");
     } catch (e: any) {
       setError(e.message || "오류가 발생했습니다.");
     } finally {
-      setLoading(false);
+      if (shouldUnlock) {
+        setLoading(false);
+      }
     }
   };
 
