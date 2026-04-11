@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect, useRef } from 'react'
 import { FrameColor, Module, EmbeddedBox, MaterialType, ModuleCategory } from '@/types'
 import { formatPrice } from '@/lib/utils'
+import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
 import Button from '@/components/ui/Button'
 import { Plus, Pencil, Trash2, Eye, EyeOff } from 'lucide-react'
 import Image from 'next/image'
@@ -613,6 +614,7 @@ export default function AdminProductsPage() {
 function ColorFormModal({
   item, onSave, onClose, saving,
 }: { item: FrameColor | null; onSave: (d: any) => void; onClose: () => void; saving: boolean }) {
+  useLockBodyScroll(true)
   const [form, setForm] = useState({
     name: item?.name || '',
     material_type: item?.material_type || 'plastic',
@@ -704,6 +706,7 @@ function ColorFormModal({
 function ModuleFormModal({
   item, colorName, onSave, onClose, saving, error,
 }: { item: Module | null; colorName: string; onSave: (d: any) => void; onClose: () => void; saving: boolean; error?: string | null }) {
+  useLockBodyScroll(true)
   const [form, setForm] = useState({
     name: item?.name || '',
     category: item?.category || '스위치류',
@@ -761,6 +764,7 @@ function ModuleFormModal({
 function BoxFormModal({
   item, onSave, onClose, saving,
 }: { item: EmbeddedBox | null; onSave: (d: any) => void; onClose: () => void; saving: boolean }) {
+  useLockBodyScroll(true)
   const [form, setForm] = useState({
     name: item?.name || '',
     price: item?.price ?? 0,

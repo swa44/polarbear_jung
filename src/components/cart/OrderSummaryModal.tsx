@@ -2,6 +2,7 @@
 
 import { CartItem } from '@/types'
 import { formatPrice } from '@/lib/utils'
+import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
 import Button from '@/components/ui/Button'
 import { useState } from 'react'
 import { X } from 'lucide-react'
@@ -27,6 +28,7 @@ export default function OrderSummaryModal({
   onConfirm,
   onClose,
 }: Props) {
+  useLockBodyScroll(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 

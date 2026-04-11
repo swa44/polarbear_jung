@@ -2,6 +2,7 @@
 
 import { Module, ModuleCategory } from '@/types'
 import { cn, formatPrice } from '@/lib/utils'
+import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
 import { X } from 'lucide-react'
 import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
@@ -25,6 +26,7 @@ export default function ModuleSelector({
   showPrice,
   slotIndex,
 }: ModuleSelectorProps) {
+  useLockBodyScroll(open)
   const [activeCategory, setActiveCategory] = useState<ModuleCategory>('스위치류')
   const [isCategoryLoading, setIsCategoryLoading] = useState(false)
   const loadedCategoryKeysRef = useRef<Set<string>>(new Set())
