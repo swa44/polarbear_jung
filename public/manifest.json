@@ -1,11 +1,16 @@
 {
   "name": "폴라베어 맞춤형 융스위치 주문",
   "short_name": "융스위치",
+  "id": "/login",
   "description": "원하는 구성으로 스위치를 직접 설계하고 주문하세요.",
-  "start_url": "/",
+  "start_url": "/login",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#18181b",
+  "lang": "ko-KR",
+  "categories": ["business", "shopping", "productivity"],
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
@@ -16,6 +21,32 @@
       "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "주문하기",
+      "short_name": "주문하기",
+      "url": "/build",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "장바구니",
+      "short_name": "장바구니",
+      "url": "/cart",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }
