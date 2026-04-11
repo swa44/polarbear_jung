@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useRef } from 'react'
-import { FrameColor, Module, EmbeddedBox } from '@/types'
+import { FrameColor, Module, EmbeddedBox, MaterialType, ModuleCategory } from '@/types'
 import { formatPrice } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import { Plus, Pencil, Trash2, Eye, EyeOff } from 'lucide-react'
@@ -638,7 +638,7 @@ function ColorFormModal({
           <div>
             <label className="text-sm font-medium text-gray-700">재질</label>
             <select value={form.material_type}
-              onChange={(e) => setForm((f) => ({ ...f, material_type: e.target.value }))}
+              onChange={(e) => setForm((f) => ({ ...f, material_type: e.target.value as MaterialType }))}
               className="w-full mt-1 px-3 py-2 rounded-xl border border-gray-200 outline-none focus:border-gray-900 text-sm">
               <option value="plastic">듀로플라스틱</option>
               <option value="metal">메탈</option>
@@ -729,7 +729,7 @@ function ModuleFormModal({
           <div>
             <label className="text-sm font-medium text-gray-700">카테고리</label>
             <select value={form.category}
-              onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+              onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as ModuleCategory }))}
               className="w-full mt-1 px-3 py-2 rounded-xl border border-gray-200 outline-none focus:border-gray-900 text-sm">
               {['스위치류', '콘센트류', '기타류'].map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
