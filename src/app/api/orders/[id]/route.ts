@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
 import { CartItem } from '@/types'
+import { getFrameColorPrice } from '@/lib/utils'
 
 function getSession(cookieStore: Awaited<ReturnType<typeof cookies>>) {
   const raw = cookieStore.get('customer_session')?.value
@@ -23,7 +24,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
     }
 
-    const supabase = await createServiceClient()
+    const supabase = createServiceClient()
 
     // 본인 주문 & pending 상태 확인
     const { data: order, error: fetchError } = await supabase
@@ -47,7 +48,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     const totalPrice = cartItems.reduce((sum, item) => {
-      const framePrice = item.frame_color.price
+      const framePrice = getFrameColorPrice(item.frame_color, item.gang_count)
       const modulesPrice = item.modules.reduce((s, m) => s + m.module_price, 0)
       const boxPrice = item.embedded_box?.price ?? 0
       return sum + (framePrice + modulesPrice + boxPrice) * item.quantity
@@ -57,15 +58,16 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     await supabase.from('order_items').delete().eq('order_id', id)
 
     const items = cartItems.map((item) => {
+      const framePrice = getFrameColorPrice(item.frame_color, item.gang_count)
       const modulesPrice = item.modules.reduce((s, m) => s + m.module_price, 0)
       const boxPrice = item.embedded_box?.price ?? 0
-      const itemPrice = item.frame_color.price + modulesPrice + boxPrice
+      const itemPrice = framePrice + modulesPrice + boxPrice
       return {
         order_id: id,
         gang_count: item.gang_count,
         frame_color_id: item.frame_color.id,
         frame_color_name: item.frame_color.name,
-        frame_color_price: item.frame_color.price,
+        frame_color_price: framePrice,
         modules: item.modules,
         embedded_box_id: item.embedded_box?.id ?? null,
         embedded_box_name: item.embedded_box?.name ?? null,
@@ -99,7 +101,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
     }
 
-    const supabase = await createServiceClient()
+    const supabase = createServiceClient()
 
     const { data: order, error: fetchError } = await supabase
       .from('orders')

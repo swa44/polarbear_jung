@@ -20,6 +20,11 @@ CREATE TABLE frame_colors (
   material_type TEXT NOT NULL CHECK (material_type IN ('plastic', 'metal')),
   image_url TEXT,
   price INTEGER NOT NULL DEFAULT 0,
+  price_1 INTEGER NOT NULL DEFAULT 0,
+  price_2 INTEGER NOT NULL DEFAULT 0,
+  price_3 INTEGER NOT NULL DEFAULT 0,
+  price_4 INTEGER NOT NULL DEFAULT 0,
+  price_5 INTEGER NOT NULL DEFAULT 0,
   is_active BOOLEAN NOT NULL DEFAULT true,
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now()
@@ -28,6 +33,7 @@ CREATE TABLE frame_colors (
 -- 모듈 테이블
 CREATE TABLE modules (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  frame_color_id UUID NOT NULL REFERENCES frame_colors(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   category TEXT NOT NULL CHECK (category IN ('스위치류', '콘센트류', '기타류')),
   price INTEGER NOT NULL DEFAULT 0,
@@ -59,6 +65,7 @@ CREATE TABLE orders (
   shipping_detail TEXT,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'shipped', 'cancelled')),
   total_price INTEGER NOT NULL DEFAULT 0,
+  tracking_company TEXT,
   tracking_number TEXT,
   admin_memo TEXT,
   cancelled_at TIMESTAMPTZ,
@@ -102,41 +109,25 @@ INSERT INTO settings (key, value) VALUES
   ('telegram_enabled', 'false');
 
 -- 프레임 색상 (듀로플라스틱)
-INSERT INTO frame_colors (name, material_type, price, sort_order) VALUES
-  ('화이트', 'plastic', 0, 1),
-  ('블랙', 'plastic', 0, 2),
-  ('매트화이트', 'plastic', 0, 3),
-  ('매트블랙', 'plastic', 0, 4),
-  ('아이보리', 'plastic', 0, 5),
-  ('라이트 그레이', 'plastic', 0, 6);
+INSERT INTO frame_colors (name, material_type, price, price_1, price_2, price_3, price_4, price_5, sort_order) VALUES
+  ('화이트', 'plastic', 0, 0, 0, 0, 0, 0, 1),
+  ('블랙', 'plastic', 0, 0, 0, 0, 0, 0, 2),
+  ('매트화이트', 'plastic', 0, 0, 0, 0, 0, 0, 3),
+  ('매트블랙', 'plastic', 0, 0, 0, 0, 0, 0, 4),
+  ('아이보리', 'plastic', 0, 0, 0, 0, 0, 0, 5),
+  ('라이트 그레이', 'plastic', 0, 0, 0, 0, 0, 0, 6);
 
 -- 프레임 색상 (메탈)
-INSERT INTO frame_colors (name, material_type, price, sort_order) VALUES
-  ('스테인레스스틸', 'metal', 0, 7),
-  ('알루미늄', 'metal', 0, 8),
-  ('안테라사이트', 'metal', 0, 9),
-  ('다크', 'metal', 0, 10),
-  ('클래식브래스', 'metal', 0, 11),
-  ('앤티크브래스', 'metal', 0, 12);
+INSERT INTO frame_colors (name, material_type, price, price_1, price_2, price_3, price_4, price_5, sort_order) VALUES
+  ('스테인레스스틸', 'metal', 0, 0, 0, 0, 0, 0, 7),
+  ('알루미늄', 'metal', 0, 0, 0, 0, 0, 0, 8),
+  ('안테라사이트', 'metal', 0, 0, 0, 0, 0, 0, 9),
+  ('다크', 'metal', 0, 0, 0, 0, 0, 0, 10),
+  ('클래식브래스', 'metal', 0, 0, 0, 0, 0, 0, 11),
+  ('앤티크브래스', 'metal', 0, 0, 0, 0, 0, 0, 12);
 
--- 모듈 (스위치류)
-INSERT INTO modules (name, category, price, max_gang, sort_order) VALUES
-  ('1회로(3로겸용)', '스위치류', 0, NULL, 1),
-  ('1회로(일괄소등)', '스위치류', 0, NULL, 2),
-  ('2회로(단로전용)', '스위치류', 0, NULL, 3),
-  ('2회로(3로겸용)', '스위치류', 0, NULL, 4),
-  ('3회로(3로겸용)', '스위치류', 0, 1, 5),  -- 1구 전용
-  ('디밍스위치', '스위치류', 0, NULL, 6);
-
--- 모듈 (콘센트류)
-INSERT INTO modules (name, category, price, max_gang, sort_order) VALUES
-  ('콘센트', '콘센트류', 0, NULL, 7),
-  ('방우형콘센트', '콘센트류', 0, NULL, 8);
-
--- 모듈 (기타류)
-INSERT INTO modules (name, category, price, max_gang, sort_order) VALUES
-  ('LAN1구', '기타류', 0, NULL, 9),
-  ('LAN2구', '기타류', 0, NULL, 10);
+-- 모듈은 프레임 색상별로 다르므로 관리자 페이지에서 색상별로 직접 추가하세요.
+-- (각 색상마다 동일한 모듈 종류라도 이미지/색상이 다릅니다)
 
 -- 매립박스
 INSERT INTO embedded_boxes (name, price, sort_order) VALUES

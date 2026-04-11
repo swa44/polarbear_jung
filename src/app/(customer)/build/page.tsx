@@ -1,92 +1,109 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { useCartStore } from '@/store/cartStore'
-import { FrameColor, Module, EmbeddedBox, ModuleSlotSelection, CartItem } from '@/types'
-import { cn, formatPrice } from '@/lib/utils'
-import Button from '@/components/ui/Button'
-import ModuleSelector from '@/components/builder/ModuleSelector'
-import { Plus, ChevronDown } from 'lucide-react'
-import Image from 'next/image'
-import { v4 as uuidv4 } from 'uuid'
+import { useState, useEffect } from "react";
+import { useCartStore } from "@/store/cartStore";
+import {
+  FrameColor,
+  Module,
+  EmbeddedBox,
+  ModuleSlotSelection,
+  CartItem,
+} from "@/types";
+import { cn, formatPrice, getFrameColorPrice } from "@/lib/utils";
+import Button from "@/components/ui/Button";
+import ModuleSelector from "@/components/builder/ModuleSelector";
+import { Plus, ChevronDown } from "lucide-react";
+import Image from "next/image";
+import { v4 as uuidv4 } from "uuid";
 
 interface ProductData {
-  frame_colors: FrameColor[]
-  modules: Module[]
-  embedded_boxes: EmbeddedBox[]
+  frame_colors: FrameColor[];
+  modules: Module[];
+  embedded_boxes: EmbeddedBox[];
 }
 
 export default function BuildPage() {
-  const addItem = useCartStore((s) => s.addItem)
+  const addItem = useCartStore((s) => s.addItem);
 
-  const [products, setProducts] = useState<ProductData | null>(null)
-  const [showPrice, setShowPrice] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [products, setProducts] = useState<ProductData | null>(null);
+  const [showPrice, setShowPrice] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Builder state
-  const [gangCount, setGangCount] = useState<number>(1)
-  const [selectedColor, setSelectedColor] = useState<FrameColor | null>(null)
-  const [selectedModules, setSelectedModules] = useState<(Module | null)[]>([null])
-  const [selectedBox, setSelectedBox] = useState<EmbeddedBox | null>(null)
-  const [quantity, setQuantity] = useState(1)
+  const [gangCount, setGangCount] = useState<number>(1);
+  const [selectedColor, setSelectedColor] = useState<FrameColor | null>(null);
+  const [selectedModules, setSelectedModules] = useState<(Module | null)[]>([
+    null,
+  ]);
+  const [selectedBox, setSelectedBox] = useState<EmbeddedBox | null>(null);
+  const [quantity, setQuantity] = useState(1);
 
   // Module selector sheet
-  const [selectorOpen, setSelectorOpen] = useState(false)
-  const [editingSlot, setEditingSlot] = useState<number>(0)
+  const [selectorOpen, setSelectorOpen] = useState(false);
+  const [editingSlot, setEditingSlot] = useState<number>(0);
 
   // Color tab
-  const [colorTab, setColorTab] = useState<'plastic' | 'metal'>('plastic')
+  const [colorTab, setColorTab] = useState<"plastic" | "metal">("plastic");
 
-  const [addedFeedback, setAddedFeedback] = useState(false)
+  const [addedFeedback, setAddedFeedback] = useState(false);
+  const [framePreviewFailed, setFramePreviewFailed] = useState(false);
 
   useEffect(() => {
     async function load() {
       const [productsRes, settingsRes] = await Promise.all([
-        fetch('/api/admin/products'),
-        fetch('/api/admin/settings'),
-      ])
-      const productsData = await productsRes.json()
-      const settingsData = await settingsRes.json()
+        fetch("/api/admin/products"),
+        fetch("/api/admin/settings"),
+      ]);
+      const productsData = await productsRes.json();
+      const settingsData = await settingsRes.json();
 
-      setProducts(productsData)
-      setShowPrice(settingsData.show_price === 'true')
+      setProducts(productsData);
+      setShowPrice(settingsData.show_price === "true");
       if (productsData.frame_colors?.length) {
-        setSelectedColor(productsData.frame_colors[0])
+        setSelectedColor(productsData.frame_colors[0]);
       }
-      setLoading(false)
+      setLoading(false);
     }
-    load()
-  }, [])
+    load();
+  }, []);
+
+  useEffect(() => {
+    setFramePreviewFailed(false);
+  }, [gangCount]);
 
   const handleGangCountChange = (count: number) => {
-    setGangCount(count)
-    setSelectedModules(Array(count).fill(null))
-  }
+    setGangCount(count);
+    setSelectedModules(Array(count).fill(null));
+  };
 
   const openModuleSelector = (slotIndex: number) => {
-    setEditingSlot(slotIndex)
-    setSelectorOpen(true)
-  }
+    setEditingSlot(slotIndex);
+    setSelectorOpen(true);
+  };
 
   const handleModuleSelect = (module: Module) => {
-    const newModules = [...selectedModules]
-    newModules[editingSlot] = module
-    setSelectedModules(newModules)
-    setSelectorOpen(false)
-  }
+    const newModules = [...selectedModules];
+    newModules[editingSlot] = module;
+    setSelectedModules(newModules);
+    setSelectorOpen(false);
+  };
 
-  const allModulesSelected = selectedModules.every((m) => m !== null)
-  const canAddToCart = selectedColor !== null && allModulesSelected
+  const allModulesSelected = selectedModules.every((m) => m !== null);
+  const canAddToCart = selectedColor !== null && allModulesSelected;
 
   const getItemPrice = () => {
-    if (!selectedColor) return 0
-    const modulePrice = selectedModules.reduce((s, m) => s + (m?.price ?? 0), 0)
-    const boxPrice = selectedBox?.price ?? 0
-    return selectedColor.price + modulePrice + boxPrice
-  }
+    if (!selectedColor) return 0;
+    const framePrice = getFrameColorPrice(selectedColor, gangCount);
+    const modulePrice = selectedModules.reduce(
+      (s, m) => s + (m?.price ?? 0),
+      0,
+    );
+    const boxPrice = selectedBox?.price ?? 0;
+    return framePrice + modulePrice + boxPrice;
+  };
 
   const handleAddToCart = () => {
-    if (!canAddToCart || !selectedColor) return
+    if (!canAddToCart || !selectedColor) return;
 
     const cartItem: CartItem = {
       id: uuidv4(),
@@ -100,42 +117,67 @@ export default function BuildPage() {
       })),
       embedded_box: selectedBox,
       quantity,
-    }
+    };
 
-    addItem(cartItem)
-    setAddedFeedback(true)
-    setTimeout(() => setAddedFeedback(false), 1500)
+    addItem(cartItem);
+    setAddedFeedback(true);
+    setTimeout(() => setAddedFeedback(false), 1500);
 
     // Reset
-    setSelectedModules(Array(gangCount).fill(null))
-    setSelectedBox(null)
-    setQuantity(1)
-  }
+    setSelectedModules(Array(gangCount).fill(null));
+    setSelectedBox(null);
+    setQuantity(1);
+  };
 
-  const filteredColors = products?.frame_colors.filter(
-    (c) => c.material_type === colorTab && c.is_active
-  ) || []
+  const filteredColors =
+    products?.frame_colors.filter(
+      (c) => c.material_type === colorTab && c.is_active,
+    ) || [];
 
-  const availableModules = products?.modules.filter((m) => {
-    if (!m.is_active) return false
-    if (m.max_gang !== null && m.max_gang !== gangCount) return false
-    return true
-  }) || []
+  useEffect(() => {
+    if (!products?.frame_colors?.length) return;
+
+    if (colorTab === "metal") {
+      const stainless = products.frame_colors.find(
+        (c) => c.material_type === "metal" && c.name === "스테인레스스틸" && c.is_active,
+      );
+      if (stainless) {
+        setSelectedColor(stainless);
+        setSelectedModules(Array(gangCount).fill(null));
+        return;
+      }
+    }
+
+    const firstOfTab = products.frame_colors.find(
+      (c) => c.material_type === colorTab && c.is_active,
+    );
+    if (firstOfTab) {
+      setSelectedColor(firstOfTab);
+      setSelectedModules(Array(gangCount).fill(null));
+    }
+  }, [colorTab, products, gangCount]);
+
+  const availableModules = (products?.modules ?? []).filter((m) => {
+    if (!m.is_active) return false;
+    if (m.frame_color_id !== selectedColor?.id) return false;
+    if (m.max_gang !== null && m.max_gang !== gangCount) return false;
+    return true;
+  });
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="w-8 h-8 border-2 border-gray-900 border-t-transparent rounded-full animate-spin" />
       </div>
-    )
+    );
   }
 
   return (
     <div className="px-4 py-6 flex flex-col gap-6">
-      {/* Step 1: 구수 선택 */}
+      {/* Step 1: 프레임 구수 선택 */}
       <section>
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-          Step 1 · 구수 선택
+          Step 1 · 프레임 구수 선택
         </h2>
         <div className="grid grid-cols-5 gap-2">
           {[1, 2, 3, 4, 5].map((n) => (
@@ -143,15 +185,48 @@ export default function BuildPage() {
               key={n}
               onClick={() => handleGangCountChange(n)}
               className={cn(
-                'py-3 rounded-xl border-2 text-sm font-bold transition-all',
+                "py-3 rounded-xl border-2 text-sm font-bold transition-all",
                 gangCount === n
-                  ? 'border-gray-900 bg-gray-900 text-white'
-                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-400'
+                  ? "border-gray-900 bg-gray-900 text-white"
+                  : "border-gray-200 bg-white text-gray-700 hover:border-gray-400",
               )}
             >
               {n}구
             </button>
           ))}
+        </div>
+
+        <div className="mt-3 bg-white border border-gray-100 rounded-2xl p-3">
+          <p className="text-xs font-medium text-gray-500 mb-2">
+            {gangCount}구 프레임 미리보기
+          </p>
+          <div className="w-full bg-gray-50 border border-gray-200 overflow-hidden">
+            {!framePreviewFailed ? (
+              <Image
+                src={`/frames/gang-${gangCount}.png`}
+                alt={`${gangCount}구 프레임`}
+                width={1200}
+                height={900}
+                className="w-full h-auto object-contain"
+                onError={() => setFramePreviewFailed(true)}
+              />
+            ) : selectedColor?.image_url ? (
+              <Image
+                src={selectedColor.image_url}
+                alt={`${selectedColor.name} 프레임`}
+                width={1200}
+                height={900}
+                className="w-full h-auto object-contain"
+              />
+            ) : (
+              <div className="flex items-center justify-center text-sm text-gray-400 min-h-40">
+                {gangCount}구 프레임 이미지 준비중
+              </div>
+            )}
+          </div>
+          <p className="mt-2 text-[11px] text-gray-400">
+            * 해당 프레임은 색상반영되지않은 프레임 구의 갯수만 보여집니다.
+          </p>
         </div>
       </section>
 
@@ -161,18 +236,18 @@ export default function BuildPage() {
           Step 2 · 프레임 색상
         </h2>
         <div className="flex gap-2 mb-3">
-          {(['plastic', 'metal'] as const).map((tab) => (
+          {(["plastic", "metal"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setColorTab(tab)}
               className={cn(
-                'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
                 colorTab === tab
-                  ? 'bg-gray-900 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ? "bg-gray-900 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200",
               )}
             >
-              {tab === 'plastic' ? '듀로플라스틱' : '메탈'}
+              {tab === "plastic" ? "듀로플라스틱" : "메탈"}
             </button>
           ))}
         </div>
@@ -180,12 +255,15 @@ export default function BuildPage() {
           {filteredColors.map((color) => (
             <button
               key={color.id}
-              onClick={() => setSelectedColor(color)}
+              onClick={() => {
+                setSelectedColor(color);
+                setSelectedModules(Array(gangCount).fill(null));
+              }}
               className={cn(
-                'flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all',
+                "flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all",
                 selectedColor?.id === color.id
-                  ? 'border-gray-900 bg-gray-50'
-                  : 'border-gray-200 bg-white hover:border-gray-300'
+                  ? "border-gray-900 bg-gray-50"
+                  : "border-gray-200 bg-white hover:border-gray-300",
               )}
             >
               {color.image_url ? (
@@ -194,18 +272,20 @@ export default function BuildPage() {
                   alt={color.name}
                   width={60}
                   height={60}
-                  className="rounded-lg object-cover w-14 h-14"
+                  className="object-cover w-14 h-14"
                 />
               ) : (
-                <div className="w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 text-xs">
+                <div className="w-14 h-14 bg-gray-100 flex items-center justify-center text-gray-400 text-xs">
                   No img
                 </div>
               )}
               <span className="text-xs font-medium text-gray-700 text-center leading-tight">
                 {color.name}
               </span>
-              {showPrice && color.price > 0 && (
-                <span className="text-xs text-gray-500">{formatPrice(color.price)}</span>
+              {showPrice && getFrameColorPrice(color, gangCount) > 0 && (
+                <span className="text-xs text-gray-500">
+                  {formatPrice(getFrameColorPrice(color, gangCount))}
+                </span>
               )}
             </button>
           ))}
@@ -219,16 +299,16 @@ export default function BuildPage() {
         </h2>
         <div className="flex gap-2">
           {Array.from({ length: gangCount }).map((_, i) => {
-            const mod = selectedModules[i]
+            const mod = selectedModules[i];
             return (
               <button
                 key={i}
                 onClick={() => openModuleSelector(i)}
                 className={cn(
-                  'flex-1 min-h-24 flex flex-col items-center justify-center gap-2 rounded-xl border-2 transition-all',
+                  "flex-1 min-h-24 flex flex-col items-center justify-center gap-2 rounded-xl border-2 transition-all",
                   mod
-                    ? 'border-gray-900 bg-gray-50'
-                    : 'border-dashed border-gray-300 bg-white hover:border-gray-500'
+                    ? "border-gray-900 bg-gray-50"
+                    : "border-dashed border-gray-300 bg-white hover:border-gray-500",
                 )}
               >
                 {mod ? (
@@ -239,10 +319,10 @@ export default function BuildPage() {
                         alt={mod.name}
                         width={48}
                         height={48}
-                        className="rounded-lg object-cover w-10 h-10"
+                        className="object-cover w-10 h-10"
                       />
                     ) : (
-                      <div className="w-10 h-10 rounded-lg bg-gray-200" />
+                      <div className="w-10 h-10 bg-gray-200" />
                     )}
                     <span className="text-xs font-medium text-gray-800 text-center px-1 leading-tight">
                       {mod.name}
@@ -255,12 +335,13 @@ export default function BuildPage() {
                   </>
                 )}
               </button>
-            )
+            );
           })}
         </div>
         {!allModulesSelected && (
           <p className="text-xs text-amber-600 mt-2">
-            {selectedModules.filter((m) => m === null).length}개 구의 모듈을 선택해주세요.
+            {selectedModules.filter((m) => m === null).length}개 구의 모듈을
+            선택해주세요.
           </p>
         )}
       </section>
@@ -268,50 +349,57 @@ export default function BuildPage() {
       {/* Step 4: 매립박스 (선택) */}
       <section>
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-          Step 4 · 매립박스 <span className="text-gray-400 normal-case font-normal">(선택사항)</span>
+          Step 4 · 매립박스{" "}
+          <span className="text-gray-400 normal-case font-normal">
+            (선택사항)
+          </span>
         </h2>
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => setSelectedBox(null)}
             className={cn(
-              'p-3 rounded-xl border-2 text-sm font-medium transition-all',
+              "p-3 rounded-xl border-2 text-sm font-medium transition-all",
               selectedBox === null
-                ? 'border-gray-900 bg-gray-900 text-white'
-                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                ? "border-gray-900 bg-gray-900 text-white"
+                : "border-gray-200 bg-white text-gray-600 hover:border-gray-300",
             )}
           >
             선택 안함
           </button>
-          {products?.embedded_boxes.filter((b) => b.is_active).map((box) => (
-            <button
-              key={box.id}
-              onClick={() => setSelectedBox(box)}
-              className={cn(
-                'flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all',
-                selectedBox?.id === box.id
-                  ? 'border-gray-900 bg-gray-50'
-                  : 'border-gray-200 bg-white hover:border-gray-300'
-              )}
-            >
-              {box.image_url ? (
-                <Image
-                  src={box.image_url}
-                  alt={box.name}
-                  width={48}
-                  height={48}
-                  className="rounded-lg object-cover w-10 h-10"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-lg bg-gray-100" />
-              )}
-              <span className="text-xs font-medium text-gray-700 text-center leading-tight">
-                {box.name}
-              </span>
-              {showPrice && box.price > 0 && (
-                <span className="text-xs text-gray-500">{formatPrice(box.price)}</span>
-              )}
-            </button>
-          ))}
+          {products?.embedded_boxes
+            .filter((b) => b.is_active)
+            .map((box) => (
+              <button
+                key={box.id}
+                onClick={() => setSelectedBox(box)}
+                className={cn(
+                  "flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all",
+                  selectedBox?.id === box.id
+                    ? "border-gray-900 bg-gray-50"
+                    : "border-gray-200 bg-white hover:border-gray-300",
+                )}
+              >
+                {box.image_url ? (
+                  <Image
+                    src={box.image_url}
+                    alt={box.name}
+                    width={48}
+                    height={48}
+                    className="object-cover w-10 h-10"
+                  />
+                ) : (
+                  <div className="w-10 h-10 bg-gray-100" />
+                )}
+                <span className="text-xs font-medium text-gray-700 text-center leading-tight">
+                  {box.name}
+                </span>
+                {showPrice && box.price > 0 && (
+                  <span className="text-xs text-gray-500">
+                    {formatPrice(box.price)}
+                  </span>
+                )}
+              </button>
+            ))}
         </div>
       </section>
 
@@ -326,7 +414,9 @@ export default function BuildPage() {
             >
               −
             </button>
-            <span className="w-6 text-center font-semibold text-gray-900">{quantity}</span>
+            <span className="w-6 text-center font-semibold text-gray-900">
+              {quantity}
+            </span>
             <button
               onClick={() => setQuantity((q) => q + 1)}
               className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-700 font-bold hover:bg-gray-200"
@@ -350,9 +440,9 @@ export default function BuildPage() {
           disabled={!canAddToCart}
           fullWidth
           size="lg"
-          className={cn(addedFeedback && 'bg-green-600 hover:bg-green-600')}
+          className={cn(addedFeedback && "bg-green-600 hover:bg-green-600")}
         >
-          {addedFeedback ? '✓ 장바구니에 담겼어요!' : '장바구니에 담기'}
+          {addedFeedback ? "✓ 장바구니에 담겼어요!" : "장바구니에 담기"}
         </Button>
       </div>
 
@@ -366,5 +456,5 @@ export default function BuildPage() {
         slotIndex={editingSlot}
       />
     </div>
-  )
+  );
 }

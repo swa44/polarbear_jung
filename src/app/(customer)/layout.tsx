@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useSessionStore } from '@/store/sessionStore'
 import Link from 'next/link'
@@ -12,13 +12,20 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   const pathname = usePathname()
   const isLoggedIn = useSessionStore((s) => s.isLoggedIn)
   const cartCount = useCartStore((s) => s.totalCount)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
     if (!isLoggedIn()) {
       router.replace('/login')
     }
-  }, [isLoggedIn, router])
+  }, [isLoggedIn, mounted, router])
 
+  if (!mounted) return null
   if (!isLoggedIn()) return null
 
   const navItems = [

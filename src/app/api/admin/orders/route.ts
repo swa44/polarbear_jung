@@ -13,8 +13,12 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status')
     const format = searchParams.get('format')
+    const idsParam = searchParams.get('ids')
+    const ids = idsParam
+      ? idsParam.split(',').map((id) => id.trim()).filter(Boolean)
+      : []
 
-    const supabase = await createServiceClient()
+    const supabase = createServiceClient()
     let query = supabase
       .from('orders')
       .select('*, order_items(*)')
@@ -22,6 +26,9 @@ export async function GET(req: NextRequest) {
 
     if (status && status !== 'all') {
       query = query.eq('status', status)
+    }
+    if (ids.length > 0) {
+      query = query.in('id', ids)
     }
 
     const { data, error } = await query
@@ -51,15 +58,17 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 401 })
     }
 
-    const { id, status, tracking_number, admin_memo } = await req.json()
+    const { id, status, tracking_number, tracking_company, admin_memo } = await req.json()
 
-    const supabase = await createServiceClient()
+    const supabase = createServiceClient()
     const updateData: Record<string, unknown> = {}
 
     if (status) updateData.status = status
     if (tracking_number !== undefined) updateData.tracking_number = tracking_number
+    if (tracking_company !== undefined) updateData.tracking_company = tracking_company
     if (admin_memo !== undefined) updateData.admin_memo = admin_memo
     if (status === 'shipped') updateData.shipped_at = new Date().toISOString()
+    if (status === 'cancelled') updateData.cancelled_at = new Date().toISOString()
 
     const { data, error } = await supabase
       .from('orders')
@@ -86,7 +95,7 @@ function generateCsv(orders: any[]): string {
   const BOM = '\uFEFF'
   const headers = [
     '주문번호', '주문일시', '고객명', '연락처', '배송지', '상세주소',
-    '상태', '합계금액', '송장번호', '상품내역',
+    '상태', '합계금액', '택배사', '송장번호', '상품내역',
   ]
 
   const rows = orders.map((o) => {
@@ -106,6 +115,7 @@ function generateCsv(orders: any[]): string {
       o.shipping_detail || '',
       ORDER_STATUS_LABEL[o.status] || o.status,
       o.total_price,
+      o.tracking_company || '',
       o.tracking_number || '',
       items,
     ]

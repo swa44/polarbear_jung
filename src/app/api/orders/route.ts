@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { generateOrderNumber } from '@/lib/utils'
 import { notifyNewOrder } from '@/lib/telegram'
 import { CartItem } from '@/types'
+import { getFrameColorPrice } from '@/lib/utils'
 
 function getSession(cookieStore: Awaited<ReturnType<typeof cookies>>) {
   const raw = cookieStore.get('customer_session')?.value
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
     }
 
-    const supabase = await createServiceClient()
+    const supabase = createServiceClient()
     const { data, error } = await supabase
       .from('orders')
       .select('*, order_items(*)')
@@ -58,13 +59,13 @@ export async function POST(req: NextRequest) {
 
     // 총액 계산
     const totalPrice = cartItems.reduce((sum, item) => {
-      const framePrice = item.frame_color.price
+      const framePrice = getFrameColorPrice(item.frame_color, item.gang_count)
       const modulesPrice = item.modules.reduce((s, m) => s + m.module_price, 0)
       const boxPrice = item.embedded_box?.price ?? 0
       return sum + (framePrice + modulesPrice + boxPrice) * item.quantity
     }, 0)
 
-    const supabase = await createServiceClient()
+    const supabase = createServiceClient()
     const orderNumber = generateOrderNumber()
 
     // 주문 생성
@@ -85,16 +86,17 @@ export async function POST(req: NextRequest) {
 
     // 주문 상품 생성
     const items = cartItems.map((item) => {
+      const framePrice = getFrameColorPrice(item.frame_color, item.gang_count)
       const modulesPrice = item.modules.reduce((s, m) => s + m.module_price, 0)
       const boxPrice = item.embedded_box?.price ?? 0
-      const itemPrice = item.frame_color.price + modulesPrice + boxPrice
+      const itemPrice = framePrice + modulesPrice + boxPrice
 
       return {
         order_id: order.id,
         gang_count: item.gang_count,
         frame_color_id: item.frame_color.id,
         frame_color_name: item.frame_color.name,
-        frame_color_price: item.frame_color.price,
+        frame_color_price: framePrice,
         modules: item.modules,
         embedded_box_id: item.embedded_box?.id ?? null,
         embedded_box_name: item.embedded_box?.name ?? null,

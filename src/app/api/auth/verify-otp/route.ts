@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     }
 
     const cleanPhone = phone.replace(/-/g, '')
-    const supabase = await createServiceClient()
+    const supabase = createServiceClient()
 
     const { data: otp, error } = await supabase
       .from('otp_verifications')

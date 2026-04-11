@@ -8,6 +8,11 @@ export interface FrameColor {
   material_type: MaterialType
   image_url: string | null
   price: number
+  price_1: number | null
+  price_2: number | null
+  price_3: number | null
+  price_4: number | null
+  price_5: number | null
   is_active: boolean
   sort_order: number
   created_at: string
@@ -15,6 +20,7 @@ export interface FrameColor {
 
 export interface Module {
   id: string
+  frame_color_id: string
   name: string
   category: ModuleCategory
   price: number
@@ -60,6 +66,7 @@ export interface Order {
   shipping_detail: string | null
   status: OrderStatus
   total_price: number
+  tracking_company: string | null
   tracking_number: string | null
   admin_memo: string | null
   cancelled_at: string | null

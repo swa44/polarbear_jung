@@ -66,15 +66,6 @@ export default function AdminSettingsPage() {
         </Button>
       </div>
 
-      <div className="mt-8 bg-amber-50 border border-amber-200 rounded-2xl p-4">
-        <p className="text-sm font-semibold text-amber-800 mb-2">환경변수 확인</p>
-        <div className="space-y-1 text-xs text-amber-700">
-          <p>TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID — 텔레그램 알림 연동 시 필요</p>
-          <p>SMS_API_URL, SMS_API_KEY, SMS_SENDER — SMS 인증 발송 시 필요</p>
-          <p>ADMIN_PASSWORD — 관리자 로그인 비밀번호</p>
-          <p>.env.local.example 파일을 참고하여 .env.local에 설정하세요.</p>
-        </div>
-      </div>
     </div>
   )
 }

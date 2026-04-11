@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import type { FrameColor } from '@/types'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -7,6 +8,20 @@ export function cn(...inputs: ClassValue[]) {
 
 export function formatPrice(price: number): string {
   return price.toLocaleString('ko-KR') + '원'
+}
+
+export function getFrameColorPrice(frameColor: FrameColor, gangCount: number): number {
+  const gangPriceMap = {
+    1: frameColor.price_1,
+    2: frameColor.price_2,
+    3: frameColor.price_3,
+    4: frameColor.price_4,
+    5: frameColor.price_5,
+  } as const
+
+  const gangPrice = gangPriceMap[gangCount as keyof typeof gangPriceMap]
+  if (typeof gangPrice === 'number') return gangPrice
+  return frameColor.price ?? 0
 }
 
 export function formatPhone(phone: string): string {

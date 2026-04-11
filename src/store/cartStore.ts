@@ -3,6 +3,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { CartItem } from '@/types'
+import { getFrameColorPrice } from '@/lib/utils'
 
 interface CartStore {
   items: CartItem[]
@@ -42,7 +43,7 @@ export const useCartStore = create<CartStore>()(
 
       totalPrice: () =>
         get().items.reduce((sum, item) => {
-          const framePrice = item.frame_color.price
+          const framePrice = getFrameColorPrice(item.frame_color, item.gang_count)
           const modulesPrice = item.modules.reduce((s, m) => s + m.module_price, 0)
           const boxPrice = item.embedded_box?.price ?? 0
           return sum + (framePrice + modulesPrice + boxPrice) * item.quantity

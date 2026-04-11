@@ -4,12 +4,30 @@ import { useState, useEffect } from 'react'
 import { useCartStore } from '@/store/cartStore'
 import { useSessionStore } from '@/store/sessionStore'
 import { useRouter } from 'next/navigation'
-import { cn, formatPrice } from '@/lib/utils'
+import { cn, formatPrice, getFrameColorPrice } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import { Trash2, ShoppingBag } from 'lucide-react'
 import Link from 'next/link'
 import OrderSummaryModal from '@/components/cart/OrderSummaryModal'
+import Image from 'next/image'
+
+declare global {
+  interface Window {
+    daum?: {
+      Postcode: new (options: {
+        oncomplete: (data: {
+          roadAddress: string
+          jibunAddress: string
+          bname: string
+          buildingName: string
+          apartment: 'Y' | 'N'
+          zonecode: string
+        }) => void
+      }) => { open: () => void }
+    }
+  }
+}
 
 export default function CartPage() {
   const router = useRouter()
@@ -17,16 +35,71 @@ export default function CartPage() {
   const { name, phone } = useSessionStore()
 
   const [showPrice, setShowPrice] = useState(false)
+  const [moduleImageMap, setModuleImageMap] = useState<Record<string, string | null>>({})
+  const [postcodeReady, setPostcodeReady] = useState(false)
   const [showSummary, setShowSummary] = useState(false)
   const [shippingAddress, setShippingAddress] = useState('')
   const [shippingDetail, setShippingDetail] = useState('')
   const [addressError, setAddressError] = useState('')
 
   useEffect(() => {
-    fetch('/api/admin/settings')
-      .then((r) => r.json())
-      .then((d) => setShowPrice(d.show_price === 'true'))
+    Promise.all([
+      fetch('/api/admin/settings').then((r) => r.json()),
+      fetch('/api/admin/products').then((r) => r.json()),
+    ]).then(([settingsData, productsData]) => {
+      setShowPrice(settingsData.show_price === 'true')
+      const nextMap: Record<string, string | null> = {}
+      for (const mod of productsData?.modules ?? []) {
+        nextMap[mod.id] = mod.image_url ?? null
+      }
+      setModuleImageMap(nextMap)
+    })
   }, [])
+
+  useEffect(() => {
+    if (window.daum?.Postcode) {
+      setPostcodeReady(true)
+      return
+    }
+
+    const existingScript = document.getElementById('daum-postcode-script')
+    if (existingScript) {
+      const onLoad = () => setPostcodeReady(true)
+      existingScript.addEventListener('load', onLoad)
+      return () => existingScript.removeEventListener('load', onLoad)
+    }
+
+    const script = document.createElement('script')
+    script.id = 'daum-postcode-script'
+    script.src = 'https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js'
+    script.async = true
+    script.onload = () => setPostcodeReady(true)
+    document.body.appendChild(script)
+  }, [])
+
+  const handleSearchAddress = () => {
+    if (!window.daum?.Postcode) {
+      alert('주소 검색 스크립트를 불러오는 중입니다. 잠시 후 다시 시도해주세요.')
+      return
+    }
+
+    new window.daum.Postcode({
+      oncomplete: (data) => {
+        const baseAddress = data.roadAddress || data.jibunAddress
+        let extraAddress = ''
+
+        if (data.roadAddress) {
+          const extras = [data.bname, data.apartment === 'Y' ? data.buildingName : ''].filter(Boolean)
+          if (extras.length > 0) {
+            extraAddress = ` (${extras.join(', ')})`
+          }
+        }
+
+        setShippingAddress(`[${data.zonecode}] ${baseAddress}${extraAddress}`)
+        setAddressError('')
+      },
+    }).open()
+  }
 
   const handleOrderClick = () => {
     if (!shippingAddress.trim()) {
@@ -74,7 +147,7 @@ export default function CartPage() {
       {/* Cart Items */}
       <div className="flex flex-col gap-3">
         {items.map((item) => {
-          const itemUnitPrice = item.frame_color.price
+          const itemUnitPrice = getFrameColorPrice(item.frame_color, item.gang_count)
             + item.modules.reduce((s, m) => s + m.module_price, 0)
             + (item.embedded_box?.price ?? 0)
 
@@ -85,11 +158,25 @@ export default function CartPage() {
                   <p className="font-semibold text-gray-900">
                     {item.gang_count}구 · {item.frame_color.name}
                   </p>
-                  <div className="mt-1 flex flex-wrap gap-1">
+                  <div className="mt-2 flex flex-wrap gap-2">
                     {item.modules.map((m, i) => (
-                      <span key={i} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md">
-                        {i + 1}번: {m.module_name}
-                      </span>
+                      <div
+                        key={i}
+                        className="flex flex-col items-center justify-start gap-1.5 text-[11px] bg-gray-100 text-gray-700 px-2 py-2 rounded-md min-w-24"
+                      >
+                        {moduleImageMap[m.module_id] ? (
+                          <Image
+                            src={moduleImageMap[m.module_id] as string}
+                            alt={m.module_name}
+                            width={56}
+                            height={56}
+                            className="w-14 h-14 object-cover"
+                          />
+                        ) : (
+                          <span className="w-14 h-14 bg-gray-200" />
+                        )}
+                        <span className="text-center leading-tight">{m.module_name}</span>
+                      </div>
                     ))}
                   </div>
                   {item.embedded_box && (
@@ -150,6 +237,13 @@ export default function CartPage() {
           onChange={(e) => setShippingAddress(e.target.value)}
           error={addressError}
         />
+        <Button
+          variant="secondary"
+          onClick={handleSearchAddress}
+          disabled={!postcodeReady}
+        >
+          {postcodeReady ? '주소 찾기' : '주소 API 로딩중...'}
+        </Button>
         <Input
           label="상세 주소 (선택)"
           placeholder="동/호수, 건물명 등"

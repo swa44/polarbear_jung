@@ -23,10 +23,12 @@ export default function AdminOrdersPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([])
 
   // Edit state
   const [editMemo, setEditMemo] = useState<Record<string, string>>({})
   const [editTracking, setEditTracking] = useState<Record<string, string>>({})
+  const [editTrackingCompany, setEditTrackingCompany] = useState<Record<string, string>>({})
 
   useEffect(() => {
     fetchOrders()
@@ -38,14 +40,18 @@ export default function AdminOrdersPage() {
     const data = await res.json()
     if (data.orders) {
       setOrders(data.orders)
+      setSelectedOrderIds((prev) => prev.filter((id) => data.orders.some((o: Order) => o.id === id)))
       const memos: Record<string, string> = {}
       const trackings: Record<string, string> = {}
+      const trackingCompanies: Record<string, string> = {}
       data.orders.forEach((o: Order) => {
         memos[o.id] = o.admin_memo || ''
         trackings[o.id] = o.tracking_number || ''
+        trackingCompanies[o.id] = o.tracking_company || ''
       })
       setEditMemo(memos)
       setEditTracking(trackings)
+      setEditTrackingCompany(trackingCompanies)
     }
     setLoading(false)
   }
@@ -66,7 +72,12 @@ export default function AdminOrdersPage() {
     await fetch('/api/admin/orders', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, admin_memo: editMemo[id], tracking_number: editTracking[id] }),
+      body: JSON.stringify({
+        id,
+        admin_memo: editMemo[id],
+        tracking_number: editTracking[id],
+        tracking_company: editTrackingCompany[id],
+      }),
     })
     await fetchOrders()
     setSavingId(null)
@@ -81,7 +92,12 @@ export default function AdminOrdersPage() {
     await fetch('/api/admin/orders', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, status: 'shipped', tracking_number: editTracking[id] }),
+      body: JSON.stringify({
+        id,
+        status: 'shipped',
+        tracking_number: editTracking[id],
+        tracking_company: editTrackingCompany[id],
+      }),
     })
     await fetchOrders()
     setSavingId(null)
@@ -91,14 +107,38 @@ export default function AdminOrdersPage() {
     window.open(`/api/admin/orders?status=${statusFilter}&format=csv`, '_blank')
   }
 
+  const handleSelectedCsvDownload = () => {
+    if (selectedOrderIds.length === 0) return
+    const ids = encodeURIComponent(selectedOrderIds.join(','))
+    window.open(`/api/admin/orders?status=${statusFilter}&format=csv&ids=${ids}`, '_blank')
+  }
+
+  const toggleOrderSelection = (id: string, checked: boolean) => {
+    setSelectedOrderIds((prev) => {
+      if (checked) return [...prev, id]
+      return prev.filter((v) => v !== id)
+    })
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">주문 관리</h1>
-        <Button variant="secondary" size="sm" onClick={handleCsvDownload}>
-          <Download className="w-4 h-4 mr-1.5" />
-          CSV 다운로드
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleSelectedCsvDownload}
+            disabled={selectedOrderIds.length === 0}
+          >
+            <Download className="w-4 h-4 mr-1.5" />
+            선택 CSV ({selectedOrderIds.length})
+          </Button>
+          <Button variant="secondary" size="sm" onClick={handleCsvDownload}>
+            <Download className="w-4 h-4 mr-1.5" />
+            전체 CSV
+          </Button>
+        </div>
       </div>
 
       {/* Status Filter */}
@@ -137,6 +177,15 @@ export default function AdminOrdersPage() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
+                      <div className="mb-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedOrderIds.includes(order.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => toggleOrderSelection(order.id, e.target.checked)}
+                          className="w-4 h-4 accent-gray-900"
+                        />
+                      </div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-mono text-sm font-semibold text-gray-900">{order.order_number}</span>
                         <Badge className={ORDER_STATUS_COLOR[order.status]}>{ORDER_STATUS_LABEL[order.status]}</Badge>
@@ -187,14 +236,21 @@ export default function AdminOrdersPage() {
 
                     {/* Tracking */}
                     <div>
-                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">송장번호</label>
-                      <div className="flex gap-2 mt-1">
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">택배사 / 송장번호</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-[140px_1fr_auto] gap-2 mt-1">
+                        <input
+                          type="text"
+                          placeholder="택배사 입력"
+                          value={editTrackingCompany[order.id] || ''}
+                          onChange={(e) => setEditTrackingCompany((prev) => ({ ...prev, [order.id]: e.target.value }))}
+                          className="px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-gray-900"
+                        />
                         <input
                           type="text"
                           placeholder="송장번호 입력"
                           value={editTracking[order.id] || ''}
                           onChange={(e) => setEditTracking((prev) => ({ ...prev, [order.id]: e.target.value }))}
-                          className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-gray-900"
+                          className="px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-gray-900"
                         />
                         {order.status !== 'shipped' && (
                           <Button
@@ -231,15 +287,17 @@ export default function AdminOrdersPage() {
                     </div>
 
                     {/* Status Actions */}
-                    {order.status === 'pending' && (
+                    {['pending', 'confirmed', 'shipped'].includes(order.status) && (
                       <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          loading={savingId === order.id}
-                          onClick={() => handleUpdateStatus(order.id, 'confirmed')}
-                        >
-                          주문 확인
-                        </Button>
+                        {order.status === 'pending' && (
+                          <Button
+                            size="sm"
+                            loading={savingId === order.id}
+                            onClick={() => handleUpdateStatus(order.id, 'confirmed')}
+                          >
+                            주문 확인
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="danger"

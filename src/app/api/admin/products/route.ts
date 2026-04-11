@@ -4,7 +4,7 @@ import { checkAdminAuth } from '@/lib/admin-auth'
 
 export async function GET() {
   try {
-    const supabase = await createServiceClient()
+    const supabase = createServiceClient()
     const [colors, modules, boxes] = await Promise.all([
       supabase.from('frame_colors').select('*').order('sort_order'),
       supabase.from('modules').select('*').order('sort_order'),
@@ -32,13 +32,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '잘못된 요청입니다.' }, { status: 400 })
     }
 
-    const supabase = await createServiceClient()
+    const supabase = createServiceClient()
     const { data: result, error } = await supabase.from(table).insert(data).select().single()
-    if (error) throw error
+    if (error) {
+      console.error('[products POST]', error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
 
     return NextResponse.json({ success: true, data: result })
-  } catch (e) {
-    return NextResponse.json({ error: '추가에 실패했습니다.' }, { status: 500 })
+  } catch (e: any) {
+    console.error('[products POST catch]', e)
+    return NextResponse.json({ error: e?.message || '추가에 실패했습니다.' }, { status: 500 })
   }
 }
 
@@ -53,7 +57,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: '잘못된 요청입니다.' }, { status: 400 })
     }
 
-    const supabase = await createServiceClient()
+    const supabase = createServiceClient()
     const { error } = await supabase.from(table).update(data).eq('id', id)
     if (error) throw error
 
@@ -74,7 +78,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: '잘못된 요청입니다.' }, { status: 400 })
     }
 
-    const supabase = await createServiceClient()
+    const supabase = createServiceClient()
     const { error } = await supabase.from(table).delete().eq('id', id)
     if (error) throw error
 

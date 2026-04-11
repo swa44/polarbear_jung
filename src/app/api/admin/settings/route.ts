@@ -3,7 +3,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { checkAdminAuth } from '@/lib/admin-auth'
 
 export async function GET() {
-  const supabase = await createServiceClient()
+  const supabase = createServiceClient()
   const { data } = await supabase.from('settings').select('*')
   const settings = Object.fromEntries((data || []).map((s) => [s.key, s.value]))
   return NextResponse.json(settings)
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
-  const supabase = await createServiceClient()
+  const supabase = createServiceClient()
 
   for (const [key, value] of Object.entries(body)) {
     await supabase

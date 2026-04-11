@@ -21,13 +21,22 @@ export default function LoginPage() {
   const [error, setError] = useState("");
 
   const handleSendOtp = async () => {
+    console.log("handleSendOtp 시작됨");
     setError("");
     const cleanPhone = phone.replace(/-/g, "");
-    if (!name.trim()) return setError("이름을 입력해주세요.");
-    if (!/^01[0-9]{8,9}$/.test(cleanPhone))
+    console.log("입력 데이터:", { name, phone, cleanPhone });
+
+    if (!name.trim()) {
+      console.log("이름 검증 실패");
+      return setError("이름을 입력해주세요.");
+    }
+    if (!/^01[0-9]{8,9}$/.test(cleanPhone)) {
+      console.log("전화번호 검증 실패");
       return setError("올바른 전화번호를 입력해주세요.");
+    }
 
     setLoading(true);
+    console.log("API 호출 시도...");
     try {
       const res = await fetch("/api/auth/send-otp", {
         method: "POST",
@@ -35,9 +44,11 @@ export default function LoginPage() {
         body: JSON.stringify({ phone: cleanPhone }),
       });
       const data = await res.json();
+      console.log("API 응답:", data);
       if (!res.ok) throw new Error(data.error);
       setStep("otp");
     } catch (e: any) {
+      console.error("오류 발생:", e);
       setError(e.message || "오류가 발생했습니다.");
     } finally {
       setLoading(false);

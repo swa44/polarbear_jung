@@ -50,12 +50,16 @@ ${itemLines}
 }
 
 export async function notifyShipped(order: Order): Promise<void> {
+  const trackingInfo = order.tracking_company
+    ? `${order.tracking_company} / ${order.tracking_number}`
+    : order.tracking_number
+
   const text = `
 📦 <b>발송 처리 완료</b>
 
 📋 주문번호: <code>${order.order_number}</code>
 👤 고객명: ${order.customer_name}
-🚚 송장번호: <code>${order.tracking_number}</code>
+🚚 송장번호: <code>${trackingInfo}</code>
   `.trim()
 
   await sendTelegramMessage(text)

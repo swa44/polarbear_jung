@@ -139,7 +139,9 @@ function OrdersContent() {
                     {/* Tracking */}
                     {order.tracking_number && (
                       <div className="bg-blue-50 rounded-xl p-3">
-                        <p className="text-xs text-blue-600 font-medium">송장번호</p>
+                        <p className="text-xs text-blue-600 font-medium">
+                          {order.tracking_company ? `${order.tracking_company} 송장번호` : '송장번호'}
+                        </p>
                         <p className="text-sm font-mono font-semibold text-blue-800">{order.tracking_number}</p>
                       </div>
                     )}

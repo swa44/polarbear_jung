@@ -39,13 +39,9 @@ export default function ModuleSelector({
         onClick={onClose}
       />
 
-      {/* Bottom Sheet */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 max-w-lg mx-auto bg-white rounded-t-2xl shadow-xl">
-        {/* Handle */}
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 bg-gray-300 rounded-full" />
-        </div>
-
+      {/* Centered Modal */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+      <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl flex flex-col" style={{ height: '60vh' }}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3">
           <h3 className="text-base font-semibold text-gray-900">
@@ -75,7 +71,7 @@ export default function ModuleSelector({
         </div>
 
         {/* Module Grid */}
-        <div className="px-4 pb-6 max-h-72 overflow-y-auto">
+        <div className="px-4 pb-6 flex-1 overflow-y-auto">
           <div className="grid grid-cols-3 gap-2">
             {filtered.map((module) => (
               <button
@@ -89,10 +85,10 @@ export default function ModuleSelector({
                     alt={module.name}
                     width={56}
                     height={56}
-                    className="rounded-lg object-cover w-12 h-12"
+                    className="object-cover w-12 h-12"
                   />
                 ) : (
-                  <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center">
+                  <div className="w-12 h-12 bg-gray-100 flex items-center justify-center">
                     <span className="text-xs text-gray-400">이미지 없음</span>
                   </div>
                 )}
@@ -109,6 +105,7 @@ export default function ModuleSelector({
             <p className="text-center text-gray-400 text-sm py-8">선택 가능한 모듈이 없습니다.</p>
           )}
         </div>
+      </div>
       </div>
     </>
   )
