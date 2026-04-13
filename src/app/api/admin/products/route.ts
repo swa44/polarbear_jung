@@ -1,22 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { checkAdminAuth } from '@/lib/admin-auth'
+import { applyCsvPricesToProducts, readPricePartsMap } from '@/lib/price-parts'
 
 export async function GET() {
   try {
     const supabase = createServiceClient()
-    const [colors, modules, boxes] = await Promise.all([
+    const [colors, modules, boxes, priceMap] = await Promise.all([
       supabase.from('frame_colors').select('*').order('sort_order'),
       supabase.from('modules').select('*').order('sort_order'),
       supabase.from('embedded_boxes').select('*').order('sort_order'),
+      readPricePartsMap(),
     ])
 
-    return NextResponse.json({
-      frame_colors: colors.data,
-      modules: modules.data,
-      embedded_boxes: boxes.data,
-    })
+    const merged = applyCsvPricesToProducts(
+      colors.data ?? [],
+      modules.data ?? [],
+      boxes.data ?? [],
+      priceMap,
+    )
+
+    return NextResponse.json(merged)
   } catch (e) {
+    console.error('[products GET]', e)
     return NextResponse.json({ error: '조회에 실패했습니다.' }, { status: 500 })
   }
 }

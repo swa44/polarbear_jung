@@ -16,9 +16,16 @@ export interface StorefrontData {
 
 let storefrontDataCache: StorefrontData | null = null;
 let storefrontDataPromise: Promise<StorefrontData> | null = null;
+let storefrontDataCachedAt = 0;
+const STOREFRONT_CACHE_TTL_MS =
+  process.env.NODE_ENV === "development" ? 0 : 10 * 1000;
 
 export async function getStorefrontData(): Promise<StorefrontData> {
-  if (storefrontDataCache) {
+  const isFresh =
+    storefrontDataCache &&
+    Date.now() - storefrontDataCachedAt < STOREFRONT_CACHE_TTL_MS;
+
+  if (isFresh && storefrontDataCache) {
     return storefrontDataCache;
   }
 
@@ -27,14 +34,15 @@ export async function getStorefrontData(): Promise<StorefrontData> {
   }
 
   storefrontDataPromise = Promise.all([
-    fetch("/api/admin/products", { cache: "force-cache" }).then((res) =>
+    fetch("/api/admin/products", { cache: "no-store" }).then((res) =>
       res.json(),
     ),
-    fetch("/api/admin/settings", { cache: "force-cache" }).then((res) =>
+    fetch("/api/admin/settings", { cache: "no-store" }).then((res) =>
       res.json(),
     ),
   ]).then(([products, settings]) => {
     storefrontDataCache = { products, settings };
+    storefrontDataCachedAt = Date.now();
     storefrontDataPromise = null;
     return storefrontDataCache;
   });
@@ -49,4 +57,5 @@ export function warmStorefrontData() {
 export function clearStorefrontDataCache() {
   storefrontDataCache = null;
   storefrontDataPromise = null;
+  storefrontDataCachedAt = 0;
 }

@@ -6,7 +6,6 @@ import {
   FrameColor,
   Module,
   EmbeddedBox,
-  ModuleSlotSelection,
   CartItem,
 } from "@/types";
 import { cn, formatPrice, getFrameColorPrice } from "@/lib/utils";
@@ -54,11 +53,10 @@ export default function BuildPage() {
 
   useEffect(() => {
     async function load() {
-      const { products: productsData, settings: settingsData } =
-        await getStorefrontData();
+      const { products: productsData, settings } = await getStorefrontData();
 
       setProducts(productsData);
-      setShowPrice(settingsData.show_price === "true");
+      setShowPrice(settings.show_price === "true");
       if (productsData.frame_colors?.length) {
         setSelectedColor(productsData.frame_colors[0]);
       }
@@ -126,17 +124,15 @@ export default function BuildPage() {
 
   const allModulesSelected = selectedModules.every((m) => m !== null);
   const canAddToCart = selectedColor !== null && allModulesSelected;
-
-  const getItemPrice = () => {
-    if (!selectedColor) return 0;
-    const framePrice = getFrameColorPrice(selectedColor, gangCount);
-    const modulePrice = selectedModules.reduce(
-      (s, m) => s + (m?.price ?? 0),
-      0,
-    );
-    const boxPrice = selectedBox?.price ?? 0;
-    return framePrice + modulePrice + boxPrice;
-  };
+  const comboTotalPrice =
+    selectedColor && canAddToCart
+      ? (
+          getFrameColorPrice(selectedColor, gangCount) +
+          selectedModules.reduce((sum, module) => sum + (module?.price ?? 0), 0) +
+          (selectedBox?.price ?? 0)
+        ) *
+        quantity
+      : 0;
 
   const handleAddToCart = () => {
     if (!canAddToCart || !selectedColor) return;
@@ -368,11 +364,6 @@ export default function BuildPage() {
               <span className="text-xs font-medium text-gray-700 text-center leading-tight">
                 {color.name}
               </span>
-              {showPrice && getFrameColorPrice(color, gangCount) > 0 && (
-                <span className="text-xs text-gray-500">
-                  {formatPrice(getFrameColorPrice(color, gangCount))}
-                </span>
-              )}
             </button>
           ))}
         </div>
@@ -506,11 +497,6 @@ export default function BuildPage() {
                     <span className="text-xs font-medium text-gray-700 text-center leading-tight">
                       {box.name}
                     </span>
-                    {showPrice && box.price > 0 && (
-                      <span className="text-xs text-gray-500">
-                        {formatPrice(box.price)}
-                      </span>
-                    )}
                   </button>
                 ))}
               </div>
@@ -542,11 +528,11 @@ export default function BuildPage() {
           </div>
         </div>
 
-        {showPrice && (
+        {showPrice && canAddToCart && (
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">예상 금액</span>
+            <span className="text-gray-500">조합 금액</span>
             <span className="font-semibold text-gray-900">
-              {formatPrice(getItemPrice() * quantity)}
+              {formatPrice(comboTotalPrice)}
             </span>
           </div>
         )}
@@ -568,7 +554,7 @@ export default function BuildPage() {
         onClose={() => setSelectorOpen(false)}
         modules={availableModules}
         onSelect={handleModuleSelect}
-        showPrice={showPrice}
+        showPrice={false}
         slotIndex={editingSlot}
       />
     </div>
