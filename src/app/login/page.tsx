@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useSessionStore } from "@/store/sessionStore";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import type { KeyboardEvent } from "react";
 
 type Step = "info" | "otp" | "confirm";
 
@@ -105,9 +106,9 @@ export default function LoginPage() {
       console.log("API 응답:", data);
       if (!res.ok) throw new Error(data.error);
       setStep("otp");
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("오류 발생:", e);
-      setError(e.message || "오류가 발생했습니다.");
+      setError(e instanceof Error ? e.message : "오류가 발생했습니다.");
     } finally {
       setLoading(false);
     }
@@ -143,8 +144,8 @@ export default function LoginPage() {
       setSession(data.name, data.phone);
       shouldUnlock = false;
       router.push("/build");
-    } catch (e: any) {
-      setError(e.message || "오류가 발생했습니다.");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "오류가 발생했습니다.");
     } finally {
       if (shouldUnlock) {
         setLoading(false);
@@ -173,13 +174,23 @@ export default function LoginPage() {
       setSession(data.name, data.phone);
       shouldUnlock = false;
       router.push("/build");
-    } catch (e: any) {
-      setError(e.message || "오류가 발생했습니다.");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "오류가 발생했습니다.");
     } finally {
       if (shouldUnlock) {
         setLoading(false);
       }
     }
+  };
+
+  const handleEnterAction = (
+    e: KeyboardEvent<HTMLInputElement>,
+    action: () => void,
+  ) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    if (loading) return;
+    action();
   };
 
   return (
@@ -226,6 +237,7 @@ export default function LoginPage() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 autoComplete="tel"
+                onKeyDown={(e) => handleEnterAction(e, handleSendOtp)}
               />
               {error && <p className="text-sm text-red-500">{error}</p>}
               <Button
@@ -260,6 +272,7 @@ export default function LoginPage() {
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                 autoFocus
+                onKeyDown={(e) => handleEnterAction(e, handleVerifyOtp)}
               />
               {error && <p className="text-sm text-red-500">{error}</p>}
               <Button
