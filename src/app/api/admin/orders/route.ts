@@ -235,36 +235,44 @@ function generatePickingCsv(orders: OrderForExport[], bomRows: BomRow[]): string
   >()
   const unmatched = new Set<string>()
 
-  for (const order of orders) {
-    for (const item of order.order_items ?? []) {
-      for (const mod of item.modules ?? []) {
-        const bomKey = buildBomKey(mod.module_name, item.frame_color_name)
-        const mapped = map.get(bomKey)
-        if (!mapped || mapped.length === 0) {
-          unmatched.add(`${mod.module_name} / ${item.frame_color_name}`)
-          continue
-        }
-
-        for (const part of mapped) {
-          const key = `${part.itemCode}||${part.itemName}`
-          const current = aggregate.get(key) ?? {
-            itemCode: part.itemCode,
-            itemName: part.itemName,
-            totalQty: 0,
-            orders: new Set<string>(),
-          }
-          current.totalQty += item.quantity
-          current.orders.add(order.order_number)
-          aggregate.set(key, current)
-        }
+  const addToAggregate = (
+    lookupName: string,
+    color: string,
+    qty: number,
+    orderNumber: string,
+  ) => {
+    const bomKey = buildBomKey(lookupName, color)
+    const mapped = map.get(bomKey)
+    if (!mapped || mapped.length === 0) {
+      unmatched.add(`${lookupName} / ${color}`)
+      return
+    }
+    for (const part of mapped) {
+      const key = `${part.itemCode}||${part.itemName}`
+      const current = aggregate.get(key) ?? {
+        itemCode: part.itemCode,
+        itemName: part.itemName,
+        totalQty: 0,
+        orders: new Set<string>(),
       }
+      current.totalQty += qty
+      current.orders.add(orderNumber)
+      aggregate.set(key, current)
     }
   }
 
-  if (unmatched.size > 0) {
-    throw new Error(
-      `피킹 매핑 누락: ${Array.from(unmatched).slice(0, 20).join(', ')}`
-    )
+  for (const order of orders) {
+    for (const item of order.order_items ?? []) {
+      const qty = item.quantity
+
+      // 프레임 피킹 (1구/2구... BOM 행)
+      addToAggregate(`${item.gang_count}구`, item.frame_color_name, qty, order.order_number)
+
+      // 모듈 피킹
+      for (const mod of item.modules ?? []) {
+        addToAggregate(mod.module_name, item.frame_color_name, qty, order.order_number)
+      }
+    }
   }
 
   const headers = ['품목코드', '제품명', '필요수량', '견적번호목록']
@@ -281,7 +289,12 @@ function generatePickingCsv(orders: OrderForExport[], bomRows: BomRow[]): string
         .join(',')
     )
 
-  return BOM + [headers.join(','), ...body].join('\n')
+  // 매핑 누락 항목은 에러 대신 CSV 하단에 표기
+  const unmatchedRows = Array.from(unmatched).sort().map((label) =>
+    `"[매핑누락] ${label}","","",""`
+  )
+
+  return BOM + [headers.join(','), ...body, ...unmatchedRows].join('\n')
 }
 
 function buildBomKey(productName: string, color: string): string {
