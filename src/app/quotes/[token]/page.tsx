@@ -273,20 +273,24 @@ export default function QuotePage() {
           )}
         </section>
 
-        <section className="bg-white rounded-2xl border border-gray-100 p-5">
-          <p className="text-xs font-semibold text-gray-500 mb-3">공급자</p>
+        <section className="bg-white rounded-2xl border border-gray-400 p-5">
+          <p className="text-md font-semibold text-gray-500 mb-2">공급자</p>
           <div className="flex flex-col gap-1.5">
-            <div className="flex gap-2 text-sm">
+            <div className="flex gap-2 text-md">
               <span className="text-gray-500 w-20 shrink-0">상호명</span>
-              <span className="text-gray-800 font-medium">주식회사 폴라베어</span>
+              <span className="text-gray-800 font-medium">
+                주식회사 폴라베어
+              </span>
             </div>
-            <div className="flex gap-2 text-sm">
+            <div className="flex gap-2 text-md">
               <span className="text-gray-500 w-20 shrink-0">등록번호</span>
               <span className="text-gray-800">883-87-01986</span>
             </div>
-            <div className="flex gap-2 text-sm">
+            <div className="flex gap-2 text-md">
               <span className="text-gray-500 w-20 shrink-0">소재지</span>
-              <span className="text-gray-800">대전 유성구 반석로 148 전면 1층</span>
+              <span className="text-gray-800">
+                대전 유성구 반석로 148 전면 1층
+              </span>
             </div>
           </div>
         </section>
@@ -395,7 +399,7 @@ export default function QuotePage() {
           </div>
         </section>
 
-        <section className="bg-white rounded-2xl border border-gray-100 p-5">
+        <section className="bg-white rounded-2xl border border-gray-300 p-5">
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-semibold text-gray-700">
               입금 계좌 안내
@@ -412,7 +416,7 @@ export default function QuotePage() {
           <p className="text-sm text-gray-700">예금주 : (주)폴라베어</p>
         </section>
 
-        <section className="bg-red-50 rounded-2xl border border-gray-100 p-5">
+        <section className="bg-red-50 rounded-2xl border border-gray-300 p-5">
           <p className="text-sm text-red-600">
             ･견적서 유효기간 내 배송요청이 없을 경우,<br></br> &nbsp;&nbsp;해당
             주문서는 삭제됩니다.
@@ -422,7 +426,8 @@ export default function QuotePage() {
             저장됩니다.
           </p>
           <p className="text-sm text-red-600 mt-1">
-            ･입금 후 배송정보입력을 해주셔야 출고가 진행됩니다.
+            ･입금 후 배송정보입력을 해주셔야 <br></br> &nbsp;&nbsp;출고가
+            진행됩니다.
           </p>
         </section>
 

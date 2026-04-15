@@ -201,6 +201,16 @@ export default function SingleQuotePage() {
     [colorModules, activeCategory],
   );
 
+  const coverCodeMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const p of allParts) {
+      if (p.part_name.includes("커버")) {
+        map[`${p.module_name}||${p.color_name}`] = p.part_code;
+      }
+    }
+    return map;
+  }, [allParts]);
+
   useEffect(() => {
     if (!selectedColor) return;
 
@@ -233,16 +243,6 @@ export default function SingleQuotePage() {
 
     return cancel;
   }, [colorModules, coverCodeMap, embeddedBoxes, selectedColor]);
-
-  const coverCodeMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const p of allParts) {
-      if (p.part_name.includes("커버")) {
-        map[`${p.module_name}||${p.color_name}`] = p.part_code;
-      }
-    }
-    return map;
-  }, [allParts]);
 
   const currentParts = useMemo(() => {
     if (!selectedColor || !selectedModuleName) return [];
