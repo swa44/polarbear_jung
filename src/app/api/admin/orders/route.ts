@@ -175,29 +175,47 @@ async function readPickingBomMap(): Promise<BomRow[]> {
   const raw = await readFile(csvPath, 'utf8')
   const rows = parseCsv(raw)
 
-  if (rows.length < 2) {
+  // 첫 번째 행이 병합 헤더(Column1, Column2...)인 경우 건너뜀
+  // 실제 컬럼명(상품명, 재질, 색상...)이 있는 행을 헤더로 사용
+  let headerRowIdx = 0
+  for (let i = 0; i < Math.min(rows.length, 3); i += 1) {
+    if (rows[i].map((v) => v.trim()).includes('상품명')) {
+      headerRowIdx = i
+      break
+    }
+  }
+
+  if (rows.length <= headerRowIdx + 1) {
     throw new Error('picking_bom_map.csv에 데이터가 없습니다.')
   }
 
-  const header = rows[0].map((v) => v.trim())
-  const expected = ['상품명', '색상', '품목코드', '제품명']
-  if (header.length !== expected.length || expected.some((v, i) => header[i] !== v)) {
-    throw new Error(`picking_bom_map.csv 헤더가 올바르지 않습니다. 기대값: ${expected.join(',')}`)
+  const header = rows[headerRowIdx].map((v) => v.trim())
+  const colProductName = header.indexOf('상품명')
+  const colColor = header.indexOf('색상')
+  const colItemCode = header.indexOf('품목코드')
+  const colItemName = header.indexOf('제품명')
+
+  if (colProductName === -1 || colColor === -1 || colItemCode === -1 || colItemName === -1) {
+    throw new Error(
+      `picking_bom_map.csv에 필수 컬럼이 없습니다. 필요: 상품명, 색상, 품목코드, 제품명`
+    )
   }
 
   const bomRows: BomRow[] = []
-  for (let i = 1; i < rows.length; i += 1) {
-    const lineNo = i + 1
-    const cols = rows[i]
-    if (cols.length !== 4) {
-      throw new Error(`picking_bom_map.csv ${lineNo}행 컬럼 개수가 올바르지 않습니다.`)
-    }
-    const [productName, color, itemCode, itemName] = cols.map((v) => v.trim())
-    if (!productName || !color || !itemCode || !itemName) {
-      throw new Error(`picking_bom_map.csv ${lineNo}행에 빈 값이 있습니다.`)
-    }
+  for (let i = headerRowIdx + 1; i < rows.length; i += 1) {
+    const cols = rows[i].map((v) => v.trim())
+    const productName = cols[colProductName] ?? ''
+    const color = cols[colColor] ?? ''
+    const itemCode = cols[colItemCode] ?? ''
+    const itemName = cols[colItemName] ?? ''
+    if (!productName || !color || !itemCode || !itemName) continue
     bomRows.push({ productName, color, itemCode, itemName })
   }
+
+  if (bomRows.length === 0) {
+    throw new Error('picking_bom_map.csv에 유효한 데이터 행이 없습니다.')
+  }
+
   return bomRows
 }
 
