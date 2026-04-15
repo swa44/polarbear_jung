@@ -67,23 +67,6 @@ export default function BuildPage() {
     load();
   }, []);
 
-  useEffect(() => {
-    if (!products?.frame_colors?.length) return;
-
-    const imageUrls = products.frame_colors
-      .filter((color) => color.is_active && Boolean(color.image_url))
-      .map((color) => color.image_url!)
-      .filter((src, index, arr) => arr.indexOf(src) === index);
-
-    const preloaded = imageUrls.map((src) => {
-      const img = new window.Image();
-      img.src = src;
-      return img;
-    });
-
-    return () => { preloaded.forEach((img) => { img.src = ""; }); };
-  }, [products]);
-
   // module_name||color_name → 커버 품목코드
   const coverCodeMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -272,6 +255,8 @@ export default function BuildPage() {
                 alt={color.name}
                 width={60}
                 height={60}
+                unoptimized
+                loading="lazy"
                 className="object-cover w-14 h-14"
               />
               <span className="text-xs font-medium text-gray-700 text-center leading-tight">
@@ -314,6 +299,8 @@ export default function BuildPage() {
               alt={`${selectedColor?.name} ${gangCount}구 프레임`}
               width={1200}
               height={900}
+              unoptimized
+              loading="eager"
               className="w-full h-auto object-contain"
             />
           </div>
@@ -346,6 +333,8 @@ export default function BuildPage() {
                       alt={mod.name}
                       width={48}
                       height={48}
+                      unoptimized
+                      loading="lazy"
                       className="object-cover w-10 h-10"
                     />
                     <span className="text-xs font-medium text-gray-800 text-center px-1 leading-tight">

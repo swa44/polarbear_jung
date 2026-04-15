@@ -40,6 +40,8 @@ function PartImageSmall({
       alt={partCode}
       width={64}
       height={64}
+      unoptimized
+      loading="lazy"
       className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
       onError={() => setStage((s) => s + 1)}
     />
@@ -370,6 +372,8 @@ export default function SingleQuotePage() {
                 alt={color.name}
                 width={56}
                 height={56}
+                unoptimized
+                loading="lazy"
                 className="object-cover w-12 h-12"
               />
               <span className="text-xs font-medium text-gray-700 text-center leading-tight">
@@ -472,6 +476,8 @@ export default function SingleQuotePage() {
                       alt={module.name}
                       width={72}
                       height={72}
+                      unoptimized
+                      loading="lazy"
                       className="object-cover w-16 h-16"
                     />
                     <span className="text-sm font-medium text-gray-800 text-center leading-tight">
@@ -549,6 +555,8 @@ export default function SingleQuotePage() {
                         alt={`${n}구`}
                         width={128}
                         height={128}
+                        unoptimized
+                        loading="lazy"
                         className="w-40 h-20 object-contain rounded-lg flex-shrink-0"
                       />
                       <span className="flex-1 text-sm font-medium text-gray-800 leading-tight">
