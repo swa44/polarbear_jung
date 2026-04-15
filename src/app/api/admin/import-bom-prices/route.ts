@@ -23,6 +23,11 @@ function normalizeMaterial(val: string | undefined): string | null {
   return val.trim() || null
 }
 
+function normalizeMaterialKey(val: string | null | undefined): string {
+  const normalized = normalizeMaterial(val ?? undefined)
+  return normalizeName(normalized ?? val ?? '')
+}
+
 interface BomRow {
   상품명: string
   색상: string
@@ -205,31 +210,98 @@ export async function POST(req: NextRequest) {
     else notFound.push(`매립박스 업데이트 실패: ${r.상품명}`)
   }
 
-  // ── 3. module_parts 전체 교체 (삭제 후 재삽입) ──────────────
-  const allInsertRows = [...frameRows, ...moduleRows].map((r) => ({
-    module_name: r.상품명,
-    color_name: r.색상,
-    part_code: r.품목코드,
-    part_name: r.제품명,
-    price: r.단가,
-    category: r.카테고리 || null,
-    material_type: normalizeMaterial(r.재질),
-    is_active: true,
-  }))
+  // ── 3. module_parts 매칭 행만 업데이트 + 없으면 추가 ────────
+  const incomingPartRows = [...frameRows, ...moduleRows]
+  const { data: existingParts, error: partsReadErr } = await supabase
+    .from('module_parts')
+    .select('id, module_name, color_name, part_code, part_name, category, material_type')
+  if (partsReadErr) throw partsReadErr
 
-  if (allInsertRows.length) {
-    const { error: delError } = await supabase
-      .from('module_parts')
-      .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000') // 전체 삭제
-    if (delError) throw delError
+  const partsPool = [...(existingParts ?? [])]
+  let partsUpdated = 0
+  let partsInserted = 0
 
-    const { error, count } = await supabase
+  for (const r of incomingPartRows) {
+    const next = {
+      module_name: r.상품명,
+      color_name: r.색상,
+      part_code: r.품목코드,
+      part_name: r.제품명,
+      price: r.단가,
+      category: r.카테고리 || null,
+      material_type: normalizeMaterial(r.재질),
+      is_active: true,
+    }
+
+    const targetColorKey = normalizeName(next.color_name)
+    const targetMaterialKey = normalizeMaterialKey(next.material_type)
+    const targetModuleNameKey = normalizeName(next.module_name)
+    const targetPartNameKey = normalizeName(next.part_name)
+
+    const candidates = partsPool.filter((p) => {
+      const colorMatched = normalizeName(p.color_name) === targetColorKey
+      const materialMatched =
+        normalizeMaterialKey(p.material_type) === targetMaterialKey
+      return colorMatched && materialMatched
+    })
+
+    const matchedByPartName =
+      candidates.find((p) => normalizeName(p.part_name) === targetPartNameKey) ??
+      null
+    const moduleMatchedCandidates = candidates.filter(
+      (p) => normalizeName(p.module_name) === targetModuleNameKey,
+    )
+    const matchedByModuleName =
+      moduleMatchedCandidates.length === 1 ? moduleMatchedCandidates[0] : null
+    const matchedByCode =
+      candidates.find((p) => p.part_code === next.part_code) ?? null
+
+    const matched = matchedByPartName ?? matchedByModuleName ?? matchedByCode
+
+    if (matched) {
+      const { error: updateErr } = await supabase
+        .from('module_parts')
+        .update(next)
+        .eq('id', matched.id)
+      if (updateErr) {
+        notFound.push(
+          `부품 업데이트 실패: ${next.module_name} / ${next.color_name} (${next.part_code})`,
+        )
+        continue
+      }
+
+      partsUpdated++
+      const idx = partsPool.findIndex((p) => p.id === matched.id)
+      if (idx !== -1) {
+        partsPool[idx] = { ...partsPool[idx], ...next }
+      }
+      continue
+    }
+
+    const { data: insertedPart, error: insertErr } = await supabase
       .from('module_parts')
-      .insert(allInsertRows, { count: 'exact' })
-    if (error) throw error
-    partsUpserted = count ?? allInsertRows.length
+      .insert(next)
+      .select('id, module_name, color_name, part_code, part_name, category, material_type')
+      .single()
+    if (insertErr || !insertedPart) {
+      notFound.push(
+        `부품 생성 실패: ${next.module_name} / ${next.color_name} (${next.part_code})`,
+      )
+      continue
+    }
+
+    partsPool.push(insertedPart)
+    partsInserted++
   }
 
-  return NextResponse.json({ framesUpdated, boxesUpdated, partsUpserted, notFound })
+  partsUpserted = partsUpdated + partsInserted
+
+  return NextResponse.json({
+    framesUpdated,
+    boxesUpdated,
+    partsUpserted,
+    partsUpdated,
+    partsInserted,
+    notFound,
+  })
 }

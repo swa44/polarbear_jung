@@ -7,8 +7,10 @@ export interface ModulePart {
   part_code: string
   part_name: string
   price: number
+  image_url?: string | null
   category?: string | null
   material_type?: string | null
+  is_active?: boolean
 }
 
 export type ModuleCategory = '스위치류' | '콘센트류' | '기타류'

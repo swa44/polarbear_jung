@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Order } from '@/types'
-import { formatPrice, formatDate, ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from '@/lib/utils'
+import { formatDate, ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from '@/lib/utils'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import { ChevronDown, ChevronUp, Package } from 'lucide-react'
@@ -108,31 +108,19 @@ function OrdersContent() {
 
                 {isExpanded && (
                   <div className="border-t border-gray-100 px-4 py-3 flex flex-col gap-3">
-                    {order.order_items?.map((item) => (
-                      <div key={item.id} className="text-sm">
-                        <p className="font-medium text-gray-800">
-                          {item.gang_count}구 · {item.frame_color_name} × {item.quantity}개
-                        </p>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {item.modules.map((m, i) => (
-                            <span key={i} className="text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded">
-                              {i + 1}번: {m.module_name}
-                            </span>
-                          ))}
-                        </div>
-                        {item.embedded_box_name && (
-                          <p className="text-xs text-gray-400 mt-0.5">매립박스: {item.embedded_box_name}</p>
-                        )}
-                      </div>
-                    ))}
-
-                    <div className="pt-2 border-t border-gray-100">
-                      <p className="text-xs text-gray-500">합계 금액</p>
-                      <p className="text-sm text-gray-800 font-semibold">{formatPrice(order.total_price)}</p>
+                    <div>
                       {order.quote_expires_at && (
                         <>
-                          <p className="text-xs text-gray-500 mt-2">유효기간</p>
+                          <p className="text-xs text-gray-500">유효기간</p>
                           <p className="text-sm text-gray-800">{formatDate(order.quote_expires_at)}</p>
+                        </>
+                      )}
+                      {order.tracking_company && order.tracking_number && (
+                        <>
+                          <p className="text-xs text-gray-500 mt-2">배송조회</p>
+                          <p className="text-sm text-gray-800">
+                            {order.tracking_company} · {order.tracking_number}
+                          </p>
                         </>
                       )}
                       {order.shipping_address && (

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useCartStore } from "@/store/cartStore";
-import { FrameColor, EmbeddedBox, CartItem, ModulePart, ModuleOption, ModuleCategory } from "@/types";
+import { FrameColor, EmbeddedBox, CartItem, ModulePart, ModuleOption, ModuleCategory, Module } from "@/types";
 import { cn, formatPrice, getFrameColorPrice } from "@/lib/utils";
 import Button from "@/components/ui/Button";
 import ModuleSelector from "@/components/builder/ModuleSelector";
@@ -49,6 +49,7 @@ function scheduleIdle(task: () => void) {
 interface ProductData {
   frame_colors: FrameColor[];
   embedded_boxes: EmbeddedBox[];
+  modules: Module[];
 }
 
 export default function BuildPage() {
@@ -84,6 +85,7 @@ export default function BuildPage() {
       setProducts({
         frame_colors: productsData.frame_colors,
         embedded_boxes: productsData.embedded_boxes,
+        modules: productsData.modules,
       });
       setShowPrice(false);
       if (productsData.frame_colors?.length) {
@@ -111,6 +113,16 @@ export default function BuildPage() {
     return map;
   }, [allParts]);
 
+  const frameImageByColorGang = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const part of allParts) {
+      if (!FRAME_NAMES.has(part.module_name)) continue;
+      if (!part.image_url) continue;
+      map[`${part.module_name}||${part.color_name}`] = part.image_url;
+    }
+    return map;
+  }, [allParts]);
+
   // 현재 색상의 모듈 목록 (module_parts에서 고유 module_name 추출)
   const availableModules = useMemo<ModuleOption[]>(() => {
     if (!selectedColor) return [];
@@ -133,6 +145,18 @@ export default function BuildPage() {
     return result;
   }, [allParts, selectedColor]);
 
+  const moduleImageByKey = useMemo(() => {
+    const map: Record<string, string> = {};
+    if (!products) return map;
+    const colorNameById = new Map(products.frame_colors.map((c) => [c.id, c.name]));
+    for (const mod of products.modules) {
+      const colorName = colorNameById.get(mod.frame_color_id);
+      if (!colorName || !mod.image_url) continue;
+      map[`${mod.name}||${colorName}`] = mod.image_url;
+    }
+    return map;
+  }, [products]);
+
   useEffect(() => {
     if (!selectedColor) return;
 
@@ -141,14 +165,17 @@ export default function BuildPage() {
 
       // 프레임 미리보기(1~5구)
       for (let n = 1; n <= 5; n += 1) {
-        urls.add(`/frames/${selectedColor.name}/${n}구.webp`);
+        urls.add(
+          frameImageByColorGang[`${n}구||${selectedColor.name}`] ||
+            `/frames/${selectedColor.name}/${n}구.webp`,
+        );
       }
 
       // 모듈 선택 시트에서 자주 쓰는 상위 모듈 이미지
-      for (const module of availableModules.slice(0, IDLE_PREFETCH_LIMIT)) {
+      for (const mod of availableModules.slice(0, IDLE_PREFETCH_LIMIT)) {
         const coverCode =
-          coverCodeMap[`${module.name}||${selectedColor.name}`] ??
-          module.name.replaceAll("/", ":");
+          coverCodeMap[`${mod.name}||${selectedColor.name}`] ??
+          mod.name.replaceAll("/", ":");
         urls.add(`/modules/${selectedColor.name}/${coverCode}.webp`);
       }
 
@@ -164,7 +191,13 @@ export default function BuildPage() {
     });
 
     return cancel;
-  }, [availableModules, coverCodeMap, products?.embedded_boxes, selectedColor]);
+  }, [
+    availableModules,
+    coverCodeMap,
+    frameImageByColorGang,
+    products?.embedded_boxes,
+    selectedColor,
+  ]);
 
   const handleGangCountChange = (count: number) => {
     setGangCount(count);
@@ -250,7 +283,6 @@ export default function BuildPage() {
       setSelectedColor(firstOfTab);
       setSelectedModules((prev) => Array(prev.length).fill(null));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [colorTab, products]);
 
   const activeBoxes = products?.embedded_boxes.filter((box) => box.is_active) ?? [];
@@ -317,7 +349,7 @@ export default function BuildPage() {
               )}
             >
               <Image
-                src={`/colors/${color.name}.webp`}
+                src={color.image_url || `/colors/${color.name}.webp`}
                 alt={color.name}
                 width={60}
                 height={60}
@@ -361,7 +393,10 @@ export default function BuildPage() {
           </p>
           <div className="w-full bg-gray-50 border border-gray-200 overflow-hidden">
             <Image
-              src={`/frames/${selectedColor?.name}/${gangCount}구.webp`}
+              src={
+                frameImageByColorGang[`${gangCount}구||${selectedColor?.name}`] ||
+                `/frames/${selectedColor?.name}/${gangCount}구.webp`
+              }
               alt={`${selectedColor?.name} ${gangCount}구 프레임`}
               width={1200}
               height={900}
@@ -395,7 +430,10 @@ export default function BuildPage() {
                 {mod ? (
                   <>
                     <Image
-                      src={`/modules/${selectedColor?.name}/${coverCodeMap[`${mod.name}||${selectedColor?.name}`] ?? mod.name.replaceAll('/', ':')}.webp`}
+                      src={
+                        moduleImageByKey[`${mod.name}||${selectedColor?.name}`] ||
+                        `/modules/${selectedColor?.name}/${coverCodeMap[`${mod.name}||${selectedColor?.name}`] ?? mod.name.replaceAll('/', ':')}.webp`
+                      }
                       alt={mod.name}
                       width={48}
                       height={48}
@@ -601,6 +639,7 @@ export default function BuildPage() {
         slotIndex={editingSlot}
         colorName={selectedColor?.name ?? ''}
         coverCodeMap={coverCodeMap}
+        moduleImageMap={moduleImageByKey}
       />
     </div>
   );

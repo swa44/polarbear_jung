@@ -16,6 +16,7 @@ interface ModuleSelectorProps {
   slotIndex: number
   colorName: string
   coverCodeMap?: Record<string, string>
+  moduleImageMap?: Record<string, string>
 }
 
 const CATEGORIES: ModuleCategory[] = ['스위치류', '콘센트류', '기타류']
@@ -29,6 +30,7 @@ export default function ModuleSelector({
   slotIndex,
   colorName,
   coverCodeMap = {},
+  moduleImageMap = {},
 }: ModuleSelectorProps) {
   useLockBodyScroll(open)
   const [activeCategory, setActiveCategory] = useState<ModuleCategory>('스위치류')
@@ -86,7 +88,10 @@ export default function ModuleSelector({
                 className="flex flex-col items-center gap-3 p-4 rounded-xl border-2 border-gray-200 bg-white hover:border-gray-900 hover:bg-gray-50 transition-all active:scale-95"
               >
                 <Image
-                  src={`/modules/${colorName}/${coverCodeMap[`${module.name}||${colorName}`] ?? module.name.replaceAll('/', ':')}.webp`}
+                  src={
+                    moduleImageMap[`${module.name}||${colorName}`] ||
+                    `/modules/${colorName}/${coverCodeMap[`${module.name}||${colorName}`] ?? module.name.replaceAll('/', ':')}.webp`
+                  }
                   alt={module.name}
                   width={72}
                   height={72}

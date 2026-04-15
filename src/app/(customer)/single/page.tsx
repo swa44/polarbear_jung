@@ -10,6 +10,7 @@ import {
   ModulePart,
   ModuleOption,
   ModuleCategory,
+  Module,
 } from "@/types";
 import { cn, getFrameColorPrice } from "@/lib/utils";
 import Image from "next/image";
@@ -18,6 +19,7 @@ import { useCartStore } from "@/store/cartStore";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
 
 const GANG_OPTIONS = [1, 2, 3, 4, 5];
+const FRAME_MODULE_NAMES = new Set(GANG_OPTIONS.map((n) => `${n}구`));
 const IDLE_PREFETCH_LIMIT = 24;
 
 function scheduleIdle(task: () => void) {
@@ -93,6 +95,7 @@ export default function SingleQuotePage() {
   const [frameColors, setFrameColors] = useState<FrameColor[]>([]);
   const [embeddedBoxes, setEmbeddedBoxes] = useState<EmbeddedBox[]>([]);
   const [allParts, setAllParts] = useState<ModulePart[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(true);
 
   // 색상
@@ -152,6 +155,7 @@ export default function SingleQuotePage() {
       const colors = products.frame_colors.filter((c) => c.is_active);
       setFrameColors(colors);
       setEmbeddedBoxes(products.embedded_boxes.filter((b) => b.is_active));
+      setModules(products.modules ?? []);
       setAllParts(partsRes.parts ?? []);
       const first = colors.find((c) => c.material_type === "plastic");
       if (first) setSelectedColor(first);
@@ -211,6 +215,27 @@ export default function SingleQuotePage() {
     return map;
   }, [allParts]);
 
+  const frameImageByColorGang = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const part of allParts) {
+      if (!FRAME_MODULE_NAMES.has(part.module_name)) continue;
+      if (!part.image_url) continue;
+      map[`${part.module_name}||${part.color_name}`] = part.image_url;
+    }
+    return map;
+  }, [allParts]);
+
+  const moduleImageByKey = useMemo(() => {
+    const map: Record<string, string> = {};
+    const colorNameById = new Map(frameColors.map((c) => [c.id, c.name]));
+    for (const mod of modules) {
+      const colorName = colorNameById.get(mod.frame_color_id);
+      if (!colorName || !mod.image_url) continue;
+      map[`${mod.name}||${colorName}`] = mod.image_url;
+    }
+    return map;
+  }, [frameColors, modules]);
+
   useEffect(() => {
     if (!selectedColor) return;
 
@@ -219,14 +244,17 @@ export default function SingleQuotePage() {
 
       // 프레임 선택 모달 대비
       for (let n = 1; n <= 5; n += 1) {
-        urls.add(`/frames/${selectedColor.name}/${n}구.webp`);
+        urls.add(
+          frameImageByColorGang[`${n}구||${selectedColor.name}`] ||
+            `/frames/${selectedColor.name}/${n}구.webp`,
+        );
       }
 
       // 모듈 목록 상위 이미지 프리로드
-      for (const module of colorModules.slice(0, IDLE_PREFETCH_LIMIT)) {
+      for (const mod of colorModules.slice(0, IDLE_PREFETCH_LIMIT)) {
         const coverCode =
-          coverCodeMap[`${module.name}||${selectedColor.name}`] ??
-          module.name.replaceAll("/", ":");
+          coverCodeMap[`${mod.name}||${selectedColor.name}`] ??
+          mod.name.replaceAll("/", ":");
         urls.add(`/modules/${selectedColor.name}/${coverCode}.webp`);
       }
 
@@ -242,7 +270,7 @@ export default function SingleQuotePage() {
     });
 
     return cancel;
-  }, [colorModules, coverCodeMap, embeddedBoxes, selectedColor]);
+  }, [colorModules, coverCodeMap, embeddedBoxes, frameImageByColorGang, selectedColor]);
 
   const currentParts = useMemo(() => {
     if (!selectedColor || !selectedModuleName) return [];
@@ -434,7 +462,7 @@ export default function SingleQuotePage() {
               )}
             >
               <Image
-                src={`/colors/${color.name}.webp`}
+                src={color.image_url || `/colors/${color.name}.webp`}
                 alt={color.name}
                 width={56}
                 height={56}
@@ -538,7 +566,10 @@ export default function SingleQuotePage() {
                     )}
                   >
                     <Image
-                      src={`/modules/${selectedColor?.name}/${coverCodeMap[`${module.name}||${selectedColor?.name}`] ?? module.name.replaceAll("/", ":")}.webp`}
+                      src={
+                        moduleImageByKey[`${module.name}||${selectedColor?.name}`] ||
+                        `/modules/${selectedColor?.name}/${coverCodeMap[`${module.name}||${selectedColor?.name}`] ?? module.name.replaceAll("/", ":")}.webp`
+                      }
                       alt={module.name}
                       width={72}
                       height={72}
@@ -617,7 +648,10 @@ export default function SingleQuotePage() {
                       )}
                     >
                       <Image
-                        src={`/frames/${selectedColor.name}/${n}구.webp`}
+                        src={
+                          frameImageByColorGang[`${n}구||${selectedColor.name}`] ||
+                          `/frames/${selectedColor.name}/${n}구.webp`
+                        }
                         alt={`${n}구`}
                         width={128}
                         height={128}

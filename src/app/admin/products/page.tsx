@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useRef } from 'react'
-import { FrameColor, Module, EmbeddedBox, MaterialType, ModuleCategory } from '@/types'
+import { FrameColor, Module, EmbeddedBox, MaterialType, ModuleCategory, ModulePart } from '@/types'
 import { formatPrice } from '@/lib/utils'
 import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
 import Button from '@/components/ui/Button'
@@ -15,6 +15,7 @@ interface ProductData {
   frame_colors: FrameColor[]
   modules: Module[]
   embedded_boxes: EmbeddedBox[]
+  module_parts: ModulePart[]
 }
 
 type ActiveTab = 'frame_colors' | 'embedded_boxes'
@@ -45,6 +46,10 @@ export default function AdminProductsPage() {
   const [moduleCsvMessage, setModuleCsvMessage] = useState<string | null>(null)
   const [moduleCsvError, setModuleCsvError] = useState<string | null>(null)
   const moduleCsvInputRef = useRef<HTMLInputElement | null>(null)
+  const [showFramePartForm, setShowFramePartForm] = useState(false)
+  const [editingFramePart, setEditingFramePart] = useState<ModulePart | null>(null)
+
+  const FRAME_NAMES = new Set(['1구', '2구', '3구', '4구', '5구'])
 
   useEffect(() => { loadData() }, [])
 
@@ -201,6 +206,30 @@ export default function AdminProductsPage() {
     }
   }
 
+  const handleSaveFramePart = async (formData: any) => {
+    if (!selectedColor) return
+    const payload = { ...formData, color_name: selectedColor.name }
+
+    setSaving(true)
+    if (editingFramePart?.id) {
+      await fetch('/api/admin/products', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table: 'module_parts', id: editingFramePart.id, data: payload }),
+      })
+    } else {
+      await fetch('/api/admin/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table: 'module_parts', data: { ...payload, is_active: true } }),
+      })
+    }
+    setSaving(false)
+    setShowFramePartForm(false)
+    setEditingFramePart(null)
+    loadData()
+  }
+
   const handleSaveBox = async (formData: any) => {
     setSaving(true)
     if (editingBox?.id) {
@@ -225,6 +254,9 @@ export default function AdminProductsPage() {
   const selectedColor = data?.frame_colors.find((c) => c.id === selectedColorId) ?? null
   const filteredColors = data?.frame_colors.filter((c) => c.material_type === colorMaterialTab) ?? []
   const colorModules = data?.modules.filter((m) => m.frame_color_id === selectedColorId) ?? []
+  const colorFrameParts = (data?.module_parts ?? [])
+    .filter((p) => FRAME_NAMES.has(p.module_name) && selectedColor && p.color_name === selectedColor.name)
+    .sort((a, b) => parseInt(a.module_name) - parseInt(b.module_name))
 
   if (loading) {
     return (
@@ -375,6 +407,106 @@ export default function AdminProductsPage() {
               ))}
             </div>
           </section>
+
+          {/* 프레임 섹션 - 색상 선택 시 표시 */}
+          {selectedColor && (
+            <section className="border-t border-gray-200 pt-6">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-base font-semibold text-gray-800">
+                  <span className="text-gray-500 font-normal">색상: </span>
+                  {selectedColor.name}의 프레임
+                  <span className="ml-2 text-sm text-gray-400 font-normal">({colorFrameParts.length}개)</span>
+                </h2>
+                <Button size="sm" onClick={() => { setEditingFramePart(null); setShowFramePartForm(true) }}>
+                  <Plus className="w-4 h-4 mr-1" />프레임 추가
+                </Button>
+              </div>
+              {colorFrameParts.length === 0 ? (
+                <div className="text-center py-6 text-gray-400 text-sm bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                  BOM CSV를 업로드하거나 직접 추가하세요.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {colorFrameParts.map((p) => (
+                    <div
+                      key={p.id}
+                      className={`bg-white rounded-xl border p-3 flex items-center gap-3 ${
+                        p.is_active !== false ? 'border-gray-100' : 'border-gray-200 opacity-60'
+                      }`}
+                    >
+                      <label className="flex-shrink-0 cursor-pointer relative">
+                        {p.image_url ? (
+                          <Image
+                            src={p.image_url}
+                            alt={`${p.module_name} 프레임`}
+                            width={72}
+                            height={72}
+                            className="w-16 h-16 object-cover rounded-lg"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center text-[11px] text-gray-400 text-center px-1">
+                            이미지 없음
+                          </div>
+                        )}
+                        {uploadingId === p.id && (
+                          <div className="absolute inset-0 bg-white/70 flex items-center justify-center rounded-lg">
+                            <div className="w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin" />
+                          </div>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) handleImageUpload('module_parts', p.id, file)
+                            e.currentTarget.value = ''
+                          }}
+                        />
+                      </label>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900">{p.module_name}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{p.part_code}</p>
+                        <p className="text-xs text-gray-500 truncate">{p.part_name}</p>
+                        {p.price > 0 && (
+                          <p className="text-xs font-medium text-gray-700 mt-1">{formatPrice(p.price)}</p>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <button
+                          onClick={() => handleImageRemove('module_parts', p.id)}
+                          disabled={!p.image_url}
+                          className="p-1 rounded-lg hover:bg-amber-50 text-amber-500 disabled:opacity-40 disabled:hover:bg-transparent"
+                          title="이미지 삭제"
+                        >
+                          <ImageOff className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleToggleActive('module_parts', p)}
+                          className="p-1 rounded-lg hover:bg-gray-100 text-gray-400"
+                          title={p.is_active !== false ? '비노출' : '노출'}
+                        >
+                          {p.is_active !== false ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                        </button>
+                        <button
+                          onClick={() => { setEditingFramePart(p); setShowFramePartForm(true) }}
+                          className="p-1 rounded-lg hover:bg-gray-100 text-gray-400"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete('module_parts', p.id)}
+                          className="p-1 rounded-lg hover:bg-red-50 text-red-300"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
 
           {/* 모듈 섹션 - 색상 선택 시 표시 */}
           {selectedColor && (
@@ -620,6 +752,17 @@ export default function AdminProductsPage() {
         />
       )}
 
+      {/* ── 프레임 파트 폼 모달 ── */}
+      {showFramePartForm && selectedColor && (
+        <FramePartFormModal
+          item={editingFramePart}
+          colorName={selectedColor.name}
+          onSave={handleSaveFramePart}
+          onClose={() => { setShowFramePartForm(false); setEditingFramePart(null) }}
+          saving={saving}
+        />
+      )}
+
       {/* ── 모듈 폼 모달 ── */}
       {showModuleForm && selectedColor && (
         <ModuleFormModal
@@ -653,11 +796,6 @@ function ColorFormModal({
   const [form, setForm] = useState({
     name: item?.name || '',
     material_type: item?.material_type || 'plastic',
-    price_1: item?.price_1 ?? item?.price ?? 0,
-    price_2: item?.price_2 ?? item?.price ?? 0,
-    price_3: item?.price_3 ?? item?.price ?? 0,
-    price_4: item?.price_4 ?? item?.price ?? 0,
-    price_5: item?.price_5 ?? item?.price ?? 0,
     sort_order: item?.sort_order ?? 0,
   })
   return (
@@ -681,48 +819,13 @@ function ColorFormModal({
               <option value="metal">메탈</option>
             </select>
           </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700">1구 가격 (원)</label>
-            <input type="number" value={form.price_1}
-              onChange={(e) => setForm((f) => ({ ...f, price_1: e.target.value as any }))}
-              className="w-full mt-1 px-3 py-2 rounded-xl border border-gray-200 outline-none focus:border-gray-900 text-sm" />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700">2구 가격 (원)</label>
-            <input type="number" value={form.price_2}
-              onChange={(e) => setForm((f) => ({ ...f, price_2: e.target.value as any }))}
-              className="w-full mt-1 px-3 py-2 rounded-xl border border-gray-200 outline-none focus:border-gray-900 text-sm" />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700">3구 가격 (원)</label>
-            <input type="number" value={form.price_3}
-              onChange={(e) => setForm((f) => ({ ...f, price_3: e.target.value as any }))}
-              className="w-full mt-1 px-3 py-2 rounded-xl border border-gray-200 outline-none focus:border-gray-900 text-sm" />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700">4구 가격 (원)</label>
-            <input type="number" value={form.price_4}
-              onChange={(e) => setForm((f) => ({ ...f, price_4: e.target.value as any }))}
-              className="w-full mt-1 px-3 py-2 rounded-xl border border-gray-200 outline-none focus:border-gray-900 text-sm" />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700">5구 가격 (원)</label>
-            <input type="number" value={form.price_5}
-              onChange={(e) => setForm((f) => ({ ...f, price_5: e.target.value as any }))}
-              className="w-full mt-1 px-3 py-2 rounded-xl border border-gray-200 outline-none focus:border-gray-900 text-sm" />
-          </div>
+          <p className="text-xs text-gray-400">가격은 BOM CSV 업로드 시 자동 반영됩니다.</p>
         </div>
         <div className="flex gap-2 pt-2">
           <Button
             onClick={() => onSave({
               name: form.name,
               material_type: form.material_type,
-              price: Number(form.price_1),
-              price_1: Number(form.price_1),
-              price_2: Number(form.price_2),
-              price_3: Number(form.price_3),
-              price_4: Number(form.price_4),
-              price_5: Number(form.price_5),
               sort_order: Number(form.sort_order),
             })}
             loading={saving}
@@ -788,6 +891,71 @@ function ModuleFormModal({
         {error && <p className="text-sm text-red-500 bg-red-50 px-3 py-2 rounded-xl">{error}</p>}
         <div className="flex gap-2 pt-2">
           <Button onClick={() => onSave({ name: form.name, category: form.category, price: Number(form.price), max_gang: form.max_gang ? Number(form.max_gang) : null, sort_order: Number(form.sort_order) })} loading={saving} fullWidth>저장</Button>
+          <Button onClick={onClose} variant="secondary" fullWidth>취소</Button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+/* ── Frame Part Form Modal ── */
+function FramePartFormModal({
+  item, colorName, onSave, onClose, saving,
+}: { item: ModulePart | null; colorName: string; onSave: (d: any) => void; onClose: () => void; saving: boolean }) {
+  useLockBodyScroll(true)
+  const [form, setForm] = useState({
+    module_name: item?.module_name || '',
+    part_code: item?.part_code || '',
+    part_name: item?.part_name || '',
+    price: item?.price ?? 0,
+  })
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/40 z-50" onClick={onClose} />
+      <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 max-w-sm mx-auto bg-white rounded-2xl shadow-xl p-6 flex flex-col gap-4">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">프레임 {item ? '수정' : '추가'}</h2>
+          <p className="text-sm text-gray-500 mt-0.5">색상: {colorName}</p>
+        </div>
+        <div className="flex flex-col gap-3">
+          <div>
+            <label className="text-sm font-medium text-gray-700">상품명 (BOM 상품명과 일치)</label>
+            <input type="text" value={form.module_name} placeholder="예: 1구"
+              onChange={(e) => setForm((f) => ({ ...f, module_name: e.target.value }))}
+              className="w-full mt-1 px-3 py-2 rounded-xl border border-gray-200 outline-none focus:border-gray-900 text-sm" />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700">품목코드</label>
+            <input type="text" value={form.part_code}
+              onChange={(e) => setForm((f) => ({ ...f, part_code: e.target.value }))}
+              className="w-full mt-1 px-3 py-2 rounded-xl border border-gray-200 outline-none focus:border-gray-900 text-sm" />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700">제품명</label>
+            <input type="text" value={form.part_name}
+              onChange={(e) => setForm((f) => ({ ...f, part_name: e.target.value }))}
+              className="w-full mt-1 px-3 py-2 rounded-xl border border-gray-200 outline-none focus:border-gray-900 text-sm" />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700">가격 (원)</label>
+            <input type="number" value={form.price}
+              onChange={(e) => setForm((f) => ({ ...f, price: e.target.value as any }))}
+              className="w-full mt-1 px-3 py-2 rounded-xl border border-gray-200 outline-none focus:border-gray-900 text-sm" />
+          </div>
+        </div>
+        <div className="flex gap-2 pt-2">
+          <Button
+            onClick={() => onSave({
+              module_name: form.module_name,
+              part_code: form.part_code,
+              part_name: form.part_name,
+              price: Number(form.price),
+            })}
+            loading={saving}
+            fullWidth
+          >
+            저장
+          </Button>
           <Button onClick={onClose} variant="secondary" fullWidth>취소</Button>
         </div>
       </div>

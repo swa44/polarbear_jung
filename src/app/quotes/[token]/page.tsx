@@ -46,6 +46,7 @@ export default function QuotePage() {
   const [postcodeReady, setPostcodeReady] = useState(false);
   const [shippingFormOpen, setShippingFormOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [trackingCopied, setTrackingCopied] = useState(false);
 
   const [recipientName, setRecipientName] = useState("");
   const [receiverPhone, setReceiverPhone] = useState("");
@@ -236,6 +237,34 @@ export default function QuotePage() {
     }
   };
 
+  const handleCopyTrackingNumber = async (trackingNumber: string) => {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(trackingNumber);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = trackingNumber;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        textArea.style.top = "0";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        const copiedByCommand = document.execCommand("copy");
+        document.body.removeChild(textArea);
+
+        if (!copiedByCommand) {
+          throw new Error("execCommand copy failed");
+        }
+      }
+      setTrackingCopied(true);
+      setTimeout(() => setTrackingCopied(false), 1800);
+    } catch {
+      window.prompt("아래 송장번호를 복사해주세요.", trackingNumber);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 px-4 py-12">
@@ -399,111 +428,137 @@ export default function QuotePage() {
           </div>
         </section>
 
-        <section className="bg-white rounded-2xl border border-gray-300 p-5">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-gray-700">
-              입금 계좌 안내
+        {quote.tracking_company && quote.tracking_number && (
+          <section className="bg-orange-100 rounded-2xl border border-gray-300 p-5">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <p className="text-sm font-semibold text-orange-700">배송조회</p>
+              <button
+                onClick={() => handleCopyTrackingNumber(quote.tracking_number!)}
+                className="text-xs px-3 py-1.5 rounded-lg border border-orange-300 text-orange-700 hover:bg-orange-50"
+              >
+                {trackingCopied ? "복사됨" : "송장번호 복사"}
+              </button>
+            </div>
+            <p className="text-sm text-orange-800">
+              택배사 : {quote.tracking_company}
             </p>
-            <button
-              onClick={handleCopyAccount}
-              className="text-xs px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
-            >
-              {copied ? "복사됨" : "계좌번호 복사"}
-            </button>
-          </div>
-          <p className="text-sm text-gray-700 mt-2">은행 : 국민은행</p>
-          <p className="text-sm text-gray-700">계좌 : 538237-04-004330</p>
-          <p className="text-sm text-gray-700">예금주 : (주)폴라베어</p>
-        </section>
-
-        <section className="bg-red-50 rounded-2xl border border-gray-300 p-5">
-          <p className="text-sm text-red-600">
-            ･견적서 유효기간 내 배송요청이 없을 경우,<br></br> &nbsp;&nbsp;해당
-            주문서는 삭제됩니다.
-          </p>
-          <p className="text-sm text-red-600 mt-1">
-            ･배송요청이 접수된 견적서는 <br></br> &nbsp;&nbsp;자료증빙을 위해
-            저장됩니다.
-          </p>
-          <p className="text-sm text-red-600 mt-1">
-            ･입금 후 배송정보입력을 해주셔야 <br></br> &nbsp;&nbsp;출고가
-            진행됩니다.
-          </p>
-        </section>
-
-        <section className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col gap-3">
-          <h2 className="text-base font-bold text-gray-900">배송정보 입력</h2>
-          {!shippingFormOpen ? (
-            <Button
-              onClick={() => setShippingFormOpen(true)}
-              fullWidth
-              size="lg"
-              disabled={!canSubmitShipping || saved}
-            >
-              배송정보 입력하기
-            </Button>
-          ) : (
-            <>
-              <Input
-                label="수령인"
-                placeholder="수령인 이름"
-                value={recipientName}
-                onChange={(e) => setRecipientName(e.target.value)}
-                disabled={!canSubmitShipping || saved}
-              />
-              <Input
-                label="연락처"
-                placeholder="01012345678"
-                value={receiverPhone}
-                onChange={(e) => setReceiverPhone(e.target.value)}
-                disabled={!canSubmitShipping || saved}
-              />
-              <Input
-                label="주소"
-                placeholder="클릭하여 주소 검색"
-                value={shippingAddress}
-                onClick={handleSearchAddress}
-                onChange={() => {}}
-                readOnly
-                disabled={!postcodeReady || !canSubmitShipping || saved}
-                className="cursor-pointer"
-              />
-              <Input
-                label="상세주소"
-                placeholder="동/호수, 건물명"
-                value={shippingDetail}
-                onChange={(e) => setShippingDetail(e.target.value)}
-                disabled={!canSubmitShipping || saved}
-              />
-              <Input
-                label="배송메모 (선택)"
-                placeholder="부재시 경비실 보관 등"
-                value={shippingMemo}
-                onChange={(e) => setShippingMemo(e.target.value)}
-                disabled={!canSubmitShipping || saved}
-              />
-            </>
-          )}
-
-          {saved && (
-            <p className="text-sm text-green-700">
-              배송정보가 저장되었습니다. 입금 확인 후 출고됩니다.
+            <p className="text-sm text-orange-800">
+              송장번호 : {quote.tracking_number}
             </p>
-          )}
-          {error && <p className="text-sm text-red-500">{error}</p>}
+          </section>
+        )}
 
-          {shippingFormOpen && (
-            <Button
-              onClick={handleSubmitShipping}
-              loading={saving}
-              fullWidth
-              size="lg"
-              disabled={!canSubmitShipping || saved}
-            >
-              배송정보 제출
-            </Button>
-          )}
-        </section>
+        {!(quote.tracking_company && quote.tracking_number) && (
+          <section className="bg-white rounded-2xl border border-gray-300 p-5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-gray-700">
+                입금 계좌 안내
+              </p>
+              <button
+                onClick={handleCopyAccount}
+                className="text-xs px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                {copied ? "복사됨" : "계좌번호 복사"}
+              </button>
+            </div>
+            <p className="text-sm text-gray-700 mt-2">은행 : 국민은행</p>
+            <p className="text-sm text-gray-700">계좌 : 538237-04-004330</p>
+            <p className="text-sm text-gray-700">예금주 : (주)폴라베어</p>
+          </section>
+        )}
+
+        {!(quote.tracking_company && quote.tracking_number) && (
+          <section className="bg-red-50 rounded-2xl border border-gray-300 p-5">
+            <p className="text-sm text-red-600">
+              ･견적서 유효기간 내 배송요청이 없을 경우,<br></br> &nbsp;&nbsp;해당
+              주문서는 삭제됩니다.
+            </p>
+            <p className="text-sm text-red-600 mt-1">
+              ･배송요청이 접수된 견적서는 <br></br> &nbsp;&nbsp;자료증빙을 위해
+              저장됩니다.
+            </p>
+            <p className="text-sm text-red-600 mt-1">
+              ･입금 후 배송정보입력을 해주셔야 <br></br> &nbsp;&nbsp;출고가
+              진행됩니다.
+            </p>
+          </section>
+        )}
+
+        {!(quote.tracking_company && quote.tracking_number) && (
+          <section className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col gap-3">
+            <h2 className="text-base font-bold text-gray-900">배송정보 입력</h2>
+            {!shippingFormOpen ? (
+              <Button
+                onClick={() => setShippingFormOpen(true)}
+                fullWidth
+                size="lg"
+                disabled={!canSubmitShipping || saved}
+              >
+                배송정보 입력하기
+              </Button>
+            ) : (
+              <>
+                <Input
+                  label="수령인"
+                  placeholder="수령인 이름"
+                  value={recipientName}
+                  onChange={(e) => setRecipientName(e.target.value)}
+                  disabled={!canSubmitShipping || saved}
+                />
+                <Input
+                  label="연락처"
+                  placeholder="01012345678"
+                  value={receiverPhone}
+                  onChange={(e) => setReceiverPhone(e.target.value)}
+                  disabled={!canSubmitShipping || saved}
+                />
+                <Input
+                  label="주소"
+                  placeholder="클릭하여 주소 검색"
+                  value={shippingAddress}
+                  onClick={handleSearchAddress}
+                  onChange={() => {}}
+                  readOnly
+                  disabled={!postcodeReady || !canSubmitShipping || saved}
+                  className="cursor-pointer"
+                />
+                <Input
+                  label="상세주소"
+                  placeholder="동/호수, 건물명"
+                  value={shippingDetail}
+                  onChange={(e) => setShippingDetail(e.target.value)}
+                  disabled={!canSubmitShipping || saved}
+                />
+                <Input
+                  label="배송메모 (선택)"
+                  placeholder="부재시 경비실 보관 등"
+                  value={shippingMemo}
+                  onChange={(e) => setShippingMemo(e.target.value)}
+                  disabled={!canSubmitShipping || saved}
+                />
+              </>
+            )}
+
+            {saved && (
+              <p className="text-sm text-green-700">
+                배송정보가 저장되었습니다. 입금 확인 후 출고됩니다.
+              </p>
+            )}
+            {error && <p className="text-sm text-red-500">{error}</p>}
+
+            {shippingFormOpen && (
+              <Button
+                onClick={handleSubmitShipping}
+                loading={saving}
+                fullWidth
+                size="lg"
+                disabled={!canSubmitShipping || saved}
+              >
+                배송정보 제출
+              </Button>
+            )}
+          </section>
+        )}
       </div>
     </div>
   );

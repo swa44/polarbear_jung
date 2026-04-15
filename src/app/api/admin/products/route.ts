@@ -6,10 +6,11 @@ import { applyCsvPricesToProducts, readPricePartsMap } from '@/lib/price-parts'
 export async function GET() {
   try {
     const supabase = createServiceClient()
-    const [colors, modules, boxes, priceMap] = await Promise.all([
+    const [colors, modules, boxes, parts, priceMap] = await Promise.all([
       supabase.from('frame_colors').select('*').order('sort_order'),
       supabase.from('modules').select('*').order('sort_order'),
       supabase.from('embedded_boxes').select('*').order('sort_order'),
+      supabase.from('module_parts').select('*').order('module_name').order('color_name').order('part_code'),
       readPricePartsMap(),
     ])
 
@@ -20,7 +21,7 @@ export async function GET() {
       priceMap,
     )
 
-    return NextResponse.json(merged)
+    return NextResponse.json({ ...merged, module_parts: parts.data ?? [] })
   } catch (e) {
     console.error('[products GET]', e)
     return NextResponse.json({ error: '조회에 실패했습니다.' }, { status: 500 })
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { table, data } = await req.json()
-    if (!['frame_colors', 'modules', 'embedded_boxes'].includes(table)) {
+    if (!['frame_colors', 'modules', 'embedded_boxes', 'module_parts'].includes(table)) {
       return NextResponse.json({ error: '잘못된 요청입니다.' }, { status: 400 })
     }
 
@@ -59,7 +60,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const { table, id, data } = await req.json()
-    if (!['frame_colors', 'modules', 'embedded_boxes'].includes(table)) {
+    if (!['frame_colors', 'modules', 'embedded_boxes', 'module_parts'].includes(table)) {
       return NextResponse.json({ error: '잘못된 요청입니다.' }, { status: 400 })
     }
 
@@ -80,7 +81,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     const { table, id } = await req.json()
-    if (!['frame_colors', 'modules', 'embedded_boxes'].includes(table)) {
+    if (!['frame_colors', 'modules', 'embedded_boxes', 'module_parts'].includes(table)) {
       return NextResponse.json({ error: '잘못된 요청입니다.' }, { status: 400 })
     }
 
