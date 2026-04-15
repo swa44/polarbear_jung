@@ -12,6 +12,39 @@ import { v4 as uuidv4 } from "uuid";
 import { getStorefrontData } from "@/lib/storefront-data";
 
 const FRAME_NAMES = new Set(['1구', '2구', '3구', '4구', '5구'])
+const IDLE_PREFETCH_LIMIT = 24;
+
+function scheduleIdle(task: () => void) {
+  if (typeof window === "undefined") return () => {};
+
+  let cancelled = false;
+  const run = () => {
+    if (cancelled) return;
+    task();
+  };
+
+  const w = window as Window & {
+    requestIdleCallback?: (
+      callback: IdleRequestCallback,
+      options?: IdleRequestOptions,
+    ) => number;
+    cancelIdleCallback?: (handle: number) => void;
+  };
+
+  if (w.requestIdleCallback) {
+    const id = w.requestIdleCallback(run, { timeout: 1200 });
+    return () => {
+      cancelled = true;
+      w.cancelIdleCallback?.(id);
+    };
+  }
+
+  const timeoutId = window.setTimeout(run, 250);
+  return () => {
+    cancelled = true;
+    window.clearTimeout(timeoutId);
+  };
+}
 
 interface ProductData {
   frame_colors: FrameColor[];
@@ -99,6 +132,39 @@ export default function BuildPage() {
     }
     return result;
   }, [allParts, selectedColor]);
+
+  useEffect(() => {
+    if (!selectedColor) return;
+
+    const cancel = scheduleIdle(() => {
+      const urls = new Set<string>();
+
+      // 프레임 미리보기(1~5구)
+      for (let n = 1; n <= 5; n += 1) {
+        urls.add(`/frames/${selectedColor.name}/${n}구.webp`);
+      }
+
+      // 모듈 선택 시트에서 자주 쓰는 상위 모듈 이미지
+      for (const module of availableModules.slice(0, IDLE_PREFETCH_LIMIT)) {
+        const coverCode =
+          coverCodeMap[`${module.name}||${selectedColor.name}`] ??
+          module.name.replaceAll("/", ":");
+        urls.add(`/modules/${selectedColor.name}/${coverCode}.webp`);
+      }
+
+      // 매립박스 토글 오픈 대비
+      for (const box of products?.embedded_boxes ?? []) {
+        if (box.is_active && box.image_url) urls.add(box.image_url);
+      }
+
+      urls.forEach((src) => {
+        const img = new window.Image();
+        img.src = src;
+      });
+    });
+
+    return cancel;
+  }, [availableModules, coverCodeMap, products?.embedded_boxes, selectedColor]);
 
   const handleGangCountChange = (count: number) => {
     setGangCount(count);

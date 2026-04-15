@@ -18,6 +18,39 @@ import { useCartStore } from "@/store/cartStore";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
 
 const GANG_OPTIONS = [1, 2, 3, 4, 5];
+const IDLE_PREFETCH_LIMIT = 24;
+
+function scheduleIdle(task: () => void) {
+  if (typeof window === "undefined") return () => {};
+
+  let cancelled = false;
+  const run = () => {
+    if (cancelled) return;
+    task();
+  };
+
+  const w = window as Window & {
+    requestIdleCallback?: (
+      callback: IdleRequestCallback,
+      options?: IdleRequestOptions,
+    ) => number;
+    cancelIdleCallback?: (handle: number) => void;
+  };
+
+  if (w.requestIdleCallback) {
+    const id = w.requestIdleCallback(run, { timeout: 1200 });
+    return () => {
+      cancelled = true;
+      w.cancelIdleCallback?.(id);
+    };
+  }
+
+  const timeoutId = window.setTimeout(run, 250);
+  return () => {
+    cancelled = true;
+    window.clearTimeout(timeoutId);
+  };
+}
 
 function PartImageSmall({
   colorName,
@@ -167,6 +200,39 @@ export default function SingleQuotePage() {
     () => colorModules.filter((m) => m.category === activeCategory),
     [colorModules, activeCategory],
   );
+
+  useEffect(() => {
+    if (!selectedColor) return;
+
+    const cancel = scheduleIdle(() => {
+      const urls = new Set<string>();
+
+      // 프레임 선택 모달 대비
+      for (let n = 1; n <= 5; n += 1) {
+        urls.add(`/frames/${selectedColor.name}/${n}구.webp`);
+      }
+
+      // 모듈 목록 상위 이미지 프리로드
+      for (const module of colorModules.slice(0, IDLE_PREFETCH_LIMIT)) {
+        const coverCode =
+          coverCodeMap[`${module.name}||${selectedColor.name}`] ??
+          module.name.replaceAll("/", ":");
+        urls.add(`/modules/${selectedColor.name}/${coverCode}.webp`);
+      }
+
+      // 매립박스 모달 대비
+      for (const box of embeddedBoxes) {
+        if (box.image_url) urls.add(box.image_url);
+      }
+
+      urls.forEach((src) => {
+        const img = new window.Image();
+        img.src = src;
+      });
+    });
+
+    return cancel;
+  }, [colorModules, coverCodeMap, embeddedBoxes, selectedColor]);
 
   const coverCodeMap = useMemo(() => {
     const map: Record<string, string> = {};
