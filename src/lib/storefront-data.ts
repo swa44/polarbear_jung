@@ -8,17 +8,13 @@ export interface StorefrontData {
     modules: Module[];
     embedded_boxes: EmbeddedBox[];
   };
-  settings: {
-    show_price: string;
-    telegram_enabled?: string;
-  };
 }
 
 let storefrontDataCache: StorefrontData | null = null;
 let storefrontDataPromise: Promise<StorefrontData> | null = null;
 let storefrontDataCachedAt = 0;
 const STOREFRONT_CACHE_TTL_MS =
-  process.env.NODE_ENV === "development" ? 0 : 10 * 1000;
+  0;
 
 export async function getStorefrontData(): Promise<StorefrontData> {
   const isFresh =
@@ -33,19 +29,14 @@ export async function getStorefrontData(): Promise<StorefrontData> {
     return storefrontDataPromise;
   }
 
-  storefrontDataPromise = Promise.all([
-    fetch("/api/admin/products", { cache: "no-store" }).then((res) =>
-      res.json(),
-    ),
-    fetch("/api/admin/settings", { cache: "no-store" }).then((res) =>
-      res.json(),
-    ),
-  ]).then(([products, settings]) => {
-    storefrontDataCache = { products, settings };
-    storefrontDataCachedAt = Date.now();
-    storefrontDataPromise = null;
-    return storefrontDataCache;
-  });
+  storefrontDataPromise = fetch("/api/admin/products", { cache: "no-store" })
+    .then((res) => res.json())
+    .then((products) => {
+      storefrontDataCache = { products };
+      storefrontDataCachedAt = Date.now();
+      storefrontDataPromise = null;
+      return storefrontDataCache;
+    });
 
   return storefrontDataPromise;
 }

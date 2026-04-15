@@ -4,7 +4,7 @@ import PWARegister from "@/components/pwa/PWARegister";
 
 export const metadata: Metadata = {
   title: "폴라베어 융스위치",
-  description: "원하는 구성으로 스위치를 직접 설계하고 주문하세요.",
+  description: "원하는 구성으로 스위치를 직접 설계하고 견적을 요청하세요.",
   applicationName: "융스위치",
   manifest: "/manifest.json",
   icons: {
@@ -27,6 +27,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   themeColor: "#18181b",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

@@ -1,24 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useCartStore } from "@/store/cartStore";
-import {
-  FrameColor,
-  Module,
-  EmbeddedBox,
-  CartItem,
-} from "@/types";
+import { FrameColor, EmbeddedBox, CartItem, ModulePart, ModuleOption, ModuleCategory } from "@/types";
 import { cn, formatPrice, getFrameColorPrice } from "@/lib/utils";
 import Button from "@/components/ui/Button";
 import ModuleSelector from "@/components/builder/ModuleSelector";
-import { Plus, ChevronDown } from "lucide-react";
+import { Plus, ChevronDown, ChevronUp } from "lucide-react";
 import Image from "next/image";
 import { v4 as uuidv4 } from "uuid";
 import { getStorefrontData } from "@/lib/storefront-data";
 
+const FRAME_NAMES = new Set(['1구', '2구', '3구', '4구', '5구'])
+
 interface ProductData {
   frame_colors: FrameColor[];
-  modules: Module[];
   embedded_boxes: EmbeddedBox[];
 }
 
@@ -26,16 +22,16 @@ export default function BuildPage() {
   const addItem = useCartStore((s) => s.addItem);
 
   const [products, setProducts] = useState<ProductData | null>(null);
+  const [allParts, setAllParts] = useState<ModulePart[]>([]);
   const [showPrice, setShowPrice] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Builder state
   const [gangCount, setGangCount] = useState<number>(1);
   const [selectedColor, setSelectedColor] = useState<FrameColor | null>(null);
-  const [selectedModules, setSelectedModules] = useState<(Module | null)[]>([
-    null,
-  ]);
+  const [selectedModules, setSelectedModules] = useState<(ModuleOption | null)[]>([null]);
   const [selectedBox, setSelectedBox] = useState<EmbeddedBox | null>(null);
+  const [boxQuantity, setBoxQuantity] = useState(0);
   const [quantity, setQuantity] = useState(1);
 
   // Module selector sheet
@@ -46,38 +42,29 @@ export default function BuildPage() {
   const [colorTab, setColorTab] = useState<"plastic" | "metal">("plastic");
 
   const [addedFeedback, setAddedFeedback] = useState(false);
-  const [framePreviewFailed, setFramePreviewFailed] = useState(false);
-  const [boxListOpen, setBoxListOpen] = useState(false);
-  const [boxImagesLoading, setBoxImagesLoading] = useState(false);
-  const [boxImagesReady, setBoxImagesReady] = useState(false);
+  const [boxSectionOpen, setBoxSectionOpen] = useState(false);
 
   useEffect(() => {
     async function load() {
-      const { products: productsData, settings } = await getStorefrontData();
-
-      setProducts(productsData);
-      setShowPrice(settings.show_price === "true");
+      const { products: productsData } = await getStorefrontData();
+      // ProductData only needs frame_colors and embedded_boxes now
+      setProducts({
+        frame_colors: productsData.frame_colors,
+        embedded_boxes: productsData.embedded_boxes,
+      });
+      setShowPrice(false);
       if (productsData.frame_colors?.length) {
         setSelectedColor(productsData.frame_colors[0]);
       }
       setLoading(false);
+
+      // module_parts — 모듈 목록 + 커버 이미지 소스
+      fetch('/api/module-parts')
+        .then((r) => r.json())
+        .then(({ parts }) => { if (parts) setAllParts(parts); })
+        .catch(() => {});
     }
     load();
-  }, []);
-
-  useEffect(() => {
-    const imageUrls = [1, 2, 3, 4, 5].map((n) => `/frames/gang-${n}.png`);
-    const preloaded = imageUrls.map((src) => {
-      const img = new window.Image();
-      img.src = src;
-      return img;
-    });
-
-    return () => {
-      preloaded.forEach((img) => {
-        img.src = "";
-      });
-    };
   }, []);
 
   useEffect(() => {
@@ -94,16 +81,41 @@ export default function BuildPage() {
       return img;
     });
 
-    return () => {
-      preloaded.forEach((img) => {
-        img.src = "";
-      });
-    };
+    return () => { preloaded.forEach((img) => { img.src = ""; }); };
   }, [products]);
 
-  useEffect(() => {
-    setFramePreviewFailed(false);
-  }, [gangCount]);
+  // module_name||color_name → 커버 품목코드
+  const coverCodeMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const p of allParts) {
+      if (p.part_name.includes('커버')) {
+        map[`${p.module_name}||${p.color_name}`] = p.part_code;
+      }
+    }
+    return map;
+  }, [allParts]);
+
+  // 현재 색상의 모듈 목록 (module_parts에서 고유 module_name 추출)
+  const availableModules = useMemo<ModuleOption[]>(() => {
+    if (!selectedColor) return [];
+    const seen = new Set<string>();
+    const result: ModuleOption[] = [];
+    for (const p of allParts) {
+      // 재질 컬럼이 있으면 재질로, 없으면 색상명으로 매칭
+      const matches = p.material_type
+        ? p.material_type === selectedColor.material_type
+        : p.color_name === selectedColor.name;
+      if (!matches) continue;
+      if (FRAME_NAMES.has(p.module_name)) continue;
+      if (seen.has(p.module_name)) continue;
+      const totalPrice = allParts
+        .filter((mp) => mp.module_name === p.module_name && mp.color_name === p.color_name)
+        .reduce((s, mp) => s + mp.price, 0);
+      seen.add(p.module_name);
+      result.push({ name: p.module_name, category: (p.category as ModuleCategory) ?? '기타류', price: totalPrice });
+    }
+    return result;
+  }, [allParts, selectedColor]);
 
   const handleGangCountChange = (count: number) => {
     setGangCount(count);
@@ -115,7 +127,7 @@ export default function BuildPage() {
     setSelectorOpen(true);
   };
 
-  const handleModuleSelect = (module: Module) => {
+  const handleModuleSelect = (module: ModuleOption) => {
     const newModules = [...selectedModules];
     newModules[editingSlot] = module;
     setSelectedModules(newModules);
@@ -124,14 +136,14 @@ export default function BuildPage() {
 
   const allModulesSelected = selectedModules.every((m) => m !== null);
   const canAddToCart = selectedColor !== null && allModulesSelected;
+  const selectedBoxTotal =
+    selectedBox && boxQuantity > 0 ? selectedBox.price * boxQuantity : 0;
   const comboTotalPrice =
     selectedColor && canAddToCart
-      ? (
-          getFrameColorPrice(selectedColor, gangCount) +
-          selectedModules.reduce((sum, module) => sum + (module?.price ?? 0), 0) +
-          (selectedBox?.price ?? 0)
-        ) *
-        quantity
+      ? (getFrameColorPrice(selectedColor, gangCount) +
+          selectedModules.reduce((sum, module) => sum + (module?.price ?? 0), 0)) *
+          quantity +
+        selectedBoxTotal
       : 0;
 
   const handleAddToCart = () => {
@@ -139,15 +151,17 @@ export default function BuildPage() {
 
     const cartItem: CartItem = {
       id: uuidv4(),
+      item_type: "set",
       gang_count: gangCount,
       frame_color: selectedColor,
       modules: selectedModules.map((m, i) => ({
         slot: i + 1,
-        module_id: m!.id,
+        module_id: m!.name,
         module_name: m!.name,
         module_price: m!.price,
       })),
       embedded_box: selectedBox,
+      embedded_box_quantity: selectedBox ? boxQuantity : 0,
       quantity,
     };
 
@@ -155,30 +169,27 @@ export default function BuildPage() {
     setAddedFeedback(true);
     setTimeout(() => setAddedFeedback(false), 1500);
 
-    // Reset
     setSelectedModules(Array(gangCount).fill(null));
     setSelectedBox(null);
+    setBoxQuantity(0);
     setQuantity(1);
   };
 
   const filteredColors =
-    products?.frame_colors.filter(
+    products?.frame_colors?.filter(
       (c) => c.material_type === colorTab && c.is_active,
-    ) || [];
+    ) ?? [];
 
   useEffect(() => {
     if (!products?.frame_colors?.length) return;
 
     if (colorTab === "metal") {
       const stainless = products.frame_colors.find(
-        (c) =>
-          c.material_type === "metal" &&
-          c.name === "스테인레스스틸" &&
-          c.is_active,
+        (c) => c.material_type === "metal" && c.name === "스테인레스스틸" && c.is_active,
       );
       if (stainless) {
         setSelectedColor(stainless);
-        setSelectedModules(Array(gangCount).fill(null));
+        setSelectedModules((prev) => Array(prev.length).fill(null));
         return;
       }
     }
@@ -188,63 +199,12 @@ export default function BuildPage() {
     );
     if (firstOfTab) {
       setSelectedColor(firstOfTab);
-      setSelectedModules(Array(gangCount).fill(null));
+      setSelectedModules((prev) => Array(prev.length).fill(null));
     }
-  }, [colorTab, products, gangCount]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [colorTab, products]);
 
-  const availableModules = (products?.modules ?? []).filter((m) => {
-    if (!m.is_active) return false;
-    if (m.frame_color_id !== selectedColor?.id) return false;
-    if (m.max_gang !== null && m.max_gang !== gangCount) return false;
-    return true;
-  });
-
-  const activeBoxes =
-    products?.embedded_boxes.filter((box) => box.is_active) ?? [];
-
-  useEffect(() => {
-    if (!boxListOpen) return;
-
-    if (boxImagesReady) {
-      setBoxImagesLoading(false);
-      return;
-    }
-
-    const imageUrls = (products?.embedded_boxes ?? [])
-      .filter((box) => box.is_active)
-      .map((box) => box.image_url)
-      .filter((src): src is string => Boolean(src))
-      .filter((src, index, arr) => arr.indexOf(src) === index);
-
-    if (imageUrls.length === 0) {
-      setBoxImagesLoading(false);
-      setBoxImagesReady(true);
-      return;
-    }
-
-    let cancelled = false;
-    setBoxImagesLoading(true);
-
-    Promise.all(
-      imageUrls.map(
-        (src) =>
-          new Promise<void>((resolve) => {
-            const img = new window.Image();
-            img.onload = () => resolve();
-            img.onerror = () => resolve();
-            img.src = src;
-          }),
-      ),
-    ).then(() => {
-      if (cancelled) return;
-      setBoxImagesReady(true);
-      setBoxImagesLoading(false);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [boxListOpen, boxImagesReady, products]);
+  const activeBoxes = products?.embedded_boxes.filter((box) => box.is_active) ?? [];
 
   if (loading) {
     return (
@@ -256,66 +216,25 @@ export default function BuildPage() {
 
   return (
     <div className="px-4 py-6 flex flex-col gap-6">
-      {/* Step 1: 프레임 구수 선택 */}
-      <section>
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-          Step 1 · 프레임 구수 선택
-        </h2>
-        <div className="grid grid-cols-5 gap-2">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <button
-              key={n}
-              onClick={() => handleGangCountChange(n)}
-              className={cn(
-                "py-3 rounded-xl border-2 text-sm font-bold transition-all",
-                gangCount === n
-                  ? "border-gray-900 bg-gray-900 text-white"
-                  : "border-gray-200 bg-white text-gray-700 hover:border-gray-400",
-              )}
-            >
-              {n}구
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-3 bg-white border border-gray-100 rounded-2xl p-3">
-          <p className="text-xs font-medium text-gray-500 mb-2">
-            {gangCount}구 프레임 미리보기
-          </p>
-          <div className="w-full bg-gray-50 border border-gray-200 overflow-hidden">
-            {!framePreviewFailed ? (
-              <Image
-                src={`/frames/gang-${gangCount}.png`}
-                alt={`${gangCount}구 프레임`}
-                width={1200}
-                height={900}
-                className="w-full h-auto object-contain"
-                onError={() => setFramePreviewFailed(true)}
-              />
-            ) : selectedColor?.image_url ? (
-              <Image
-                src={selectedColor.image_url}
-                alt={`${selectedColor.name} 프레임`}
-                width={1200}
-                height={900}
-                className="w-full h-auto object-contain"
-              />
-            ) : (
-              <div className="flex items-center justify-center text-sm text-gray-400 min-h-40">
-                {gangCount}구 프레임 이미지 준비중
-              </div>
-            )}
-          </div>
-          <p className="mt-2 text-[11px] text-gray-400">
-            * 해당 프레임은 색상반영되지않은 프레임 구의 갯수만 보여집니다.
-          </p>
-        </div>
+      <section className="bg-white rounded-2xl border border-gray-100 p-4">
+        <p className="text-sm font-semibold text-gray-900">세트견적 사용방법</p>
+        <ol className="mt-2 text-sm text-gray-700 list-decimal list-inside space-y-1">
+          <li>색상 → 프레임 구수 → 모듈 순서로 선택해주세요.</li>
+          <li>선택 후 수량을 설정하고 견적 바구니에 담아주세요.</li>
+          <li>매립박스는 필요시 선택 후 수량을 입력해주세요.</li>
+        </ol>
       </section>
 
-      {/* Step 2: 색상 선택 */}
+      <p className="text-sm text-blue-400 text-center">
+        필요한 제품을 모두 담은 뒤,
+        <br />
+        견적 바구니에서 한 번에 확인해주세요.
+      </p>
+
+      {/* Step 1: 색상 선택 */}
       <section>
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-          Step 2 · 프레임 색상
+          Step 1 · 프레임 및 모듈 색상
         </h2>
         <div className="flex gap-2 mb-3">
           {(["plastic", "metal"] as const).map((tab) => (
@@ -348,19 +267,13 @@ export default function BuildPage() {
                   : "border-gray-200 bg-white hover:border-gray-300",
               )}
             >
-              {color.image_url ? (
-                <Image
-                  src={color.image_url}
-                  alt={color.name}
-                  width={60}
-                  height={60}
-                  className="object-cover w-14 h-14"
-                />
-              ) : (
-                <div className="w-14 h-14 bg-gray-100 flex items-center justify-center text-gray-400 text-xs">
-                  No img
-                </div>
-              )}
+              <Image
+                src={`/colors/${color.name}.webp`}
+                alt={color.name}
+                width={60}
+                height={60}
+                className="object-cover w-14 h-14"
+              />
               <span className="text-xs font-medium text-gray-700 text-center leading-tight">
                 {color.name}
               </span>
@@ -369,10 +282,48 @@ export default function BuildPage() {
         </div>
       </section>
 
+      {/* Step 2: 프레임 구수 선택 */}
+      <section>
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+          Step 2 · 프레임 구수 선택
+        </h2>
+        <div className="grid grid-cols-5 gap-2">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button
+              key={n}
+              onClick={() => handleGangCountChange(n)}
+              className={cn(
+                "py-3 rounded-xl border-2 text-sm font-bold transition-all",
+                gangCount === n
+                  ? "border-gray-900 bg-gray-900 text-white"
+                  : "border-gray-200 bg-white text-gray-700 hover:border-gray-400",
+              )}
+            >
+              {n}구
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-3 bg-white border border-gray-100 rounded-2xl p-3">
+          <p className="text-xs font-medium text-gray-500 mb-2">
+            {gangCount}구 프레임 미리보기
+          </p>
+          <div className="w-full bg-gray-50 border border-gray-200 overflow-hidden">
+            <Image
+              src={`/frames/${selectedColor?.name}/${gangCount}구.webp`}
+              alt={`${selectedColor?.name} ${gangCount}구 프레임`}
+              width={1200}
+              height={900}
+              className="w-full h-auto object-contain"
+            />
+          </div>
+        </div>
+      </section>
+
       {/* Step 3: 모듈 선택 (Visual Builder) */}
       <section>
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-          Step 3 · 모듈 선택 ({gangCount}구)
+          Step 3 · 모듈(인서트+커버) 선택 ({gangCount}구)
         </h2>
         <div className="flex gap-2">
           {Array.from({ length: gangCount }).map((_, i) => {
@@ -390,17 +341,13 @@ export default function BuildPage() {
               >
                 {mod ? (
                   <>
-                    {mod.image_url ? (
-                      <Image
-                        src={mod.image_url}
-                        alt={mod.name}
-                        width={48}
-                        height={48}
-                        className="object-cover w-10 h-10"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 bg-gray-200" />
-                    )}
+                    <Image
+                      src={`/modules/${selectedColor?.name}/${coverCodeMap[`${mod.name}||${selectedColor?.name}`] ?? mod.name.replaceAll('/', ':')}.webp`}
+                      alt={mod.name}
+                      width={48}
+                      height={48}
+                      className="object-cover w-10 h-10"
+                    />
                     <span className="text-xs font-medium text-gray-800 text-center px-1 leading-tight">
                       {mod.name}
                     </span>
@@ -423,83 +370,89 @@ export default function BuildPage() {
         )}
       </section>
 
-      {/* Step 4: 매립박스 (선택) */}
+      {/* 추가상품: 매립박스 */}
       <section>
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-          Step 4 · 매립박스{" "}
-          <span className="block text-gray-400 normal-case font-normal">
-            (미사용시 발생하는 사고에 대해 책임지지 않습니다.)
+        <button
+          onClick={() => setBoxSectionOpen((v) => !v)}
+          className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 flex items-center justify-between"
+        >
+          <span className="text-sm font-semibold text-gray-700">
+            추가상품 · 매립박스
           </span>
-        </h2>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={() => {
-              setSelectedBox(null);
-              setBoxListOpen(false);
-            }}
-            className={cn(
-              "py-2 rounded-xl border-2 text-sm font-medium transition-all",
-              !boxListOpen
-                ? "border-gray-900 bg-gray-900 text-white"
-                : "border-gray-200 bg-white text-gray-600 hover:border-gray-300",
-            )}
-          >
-            선택 안함
-          </button>
-          <button
-            onClick={() => setBoxListOpen(true)}
-            className={cn(
-              "py-2 rounded-xl border-2 text-sm font-medium transition-all",
-              boxListOpen
-                ? "border-gray-900 bg-gray-900 text-white"
-                : "border-gray-200 bg-white text-gray-600 hover:border-gray-300",
-            )}
-          >
-            선택함
-          </button>
-        </div>
+          {boxSectionOpen ? (
+            <ChevronUp className="w-4 h-4 text-gray-400" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-gray-400" />
+          )}
+        </button>
 
-        {boxListOpen && (
-          <div className="mt-2">
-            {boxImagesLoading ? (
-              <div className="flex min-h-40 items-center justify-center rounded-2xl border border-gray-200 bg-white">
-                <div className="flex flex-col items-center gap-3 text-gray-400">
-                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-900 border-t-transparent" />
-                  <p className="text-sm">
-                    매립박스 이미지를 불러오는 중입니다.
-                  </p>
-                </div>
+        {boxSectionOpen && (
+          <div className="mt-3">
+            <p className="text-gray-400 text-xs mb-3">
+              (미사용시 발생하는 사고에 대해 책임지지 않습니다.)
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {activeBoxes.map((box) => (
+                <button
+                  key={box.id}
+                  onClick={() => {
+                    setSelectedBox(box);
+                    if (boxQuantity < 1) setBoxQuantity(1);
+                  }}
+                  className={cn(
+                    "flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all",
+                    selectedBox?.id === box.id
+                      ? "border-gray-900 bg-gray-50"
+                      : "border-gray-200 bg-white hover:border-gray-300",
+                  )}
+                >
+                  {box.image_url ? (
+                    <Image
+                      src={box.image_url}
+                      alt={box.name}
+                      width={48}
+                      height={48}
+                      className="object-cover w-10 h-10"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 bg-gray-100" />
+                  )}
+                  <span className="text-xs font-medium text-gray-700 text-center leading-tight">
+                    {box.name}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div className="mt-3 bg-white rounded-xl border border-gray-200 p-3 flex items-center justify-between">
+              <span className="text-sm text-gray-600">매립박스 수량</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    if (!selectedBox) return;
+                    setBoxQuantity((q) => Math.max(0, q - 1));
+                  }}
+                  className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center text-sm font-bold"
+                >
+                  −
+                </button>
+                <span className="w-8 text-center text-sm font-semibold text-gray-900">
+                  {boxQuantity}
+                </span>
+                <button
+                  onClick={() => {
+                    if (!selectedBox) return;
+                    setBoxQuantity((q) => q + 1);
+                  }}
+                  className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center text-sm font-bold"
+                >
+                  +
+                </button>
               </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-2">
-                {activeBoxes.map((box) => (
-                  <button
-                    key={box.id}
-                    onClick={() => setSelectedBox(box)}
-                    className={cn(
-                      "flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all",
-                      selectedBox?.id === box.id
-                        ? "border-gray-900 bg-gray-50"
-                        : "border-gray-200 bg-white hover:border-gray-300",
-                    )}
-                  >
-                    {box.image_url ? (
-                      <Image
-                        src={box.image_url}
-                        alt={box.name}
-                        width={48}
-                        height={48}
-                        className="object-cover w-10 h-10"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 bg-gray-100" />
-                    )}
-                    <span className="text-xs font-medium text-gray-700 text-center leading-tight">
-                      {box.name}
-                    </span>
-                  </button>
-                ))}
-              </div>
+            </div>
+            {selectedBox && boxQuantity > 0 && (
+              <p className="mt-2 text-xs text-gray-500">
+                추가상품: {selectedBox.name} × {boxQuantity}
+              </p>
             )}
           </div>
         )}
@@ -507,6 +460,41 @@ export default function BuildPage() {
 
       {/* 수량 & 담기 */}
       <div className="bg-white rounded-2xl border border-gray-100 p-4 flex flex-col gap-4">
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 flex flex-col gap-1.5">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            현재 세트 구성
+          </p>
+          <p className="text-sm text-gray-700">
+            색상:{" "}
+            <span className="font-medium text-gray-900">
+              {selectedColor?.name ?? "미선택"}
+            </span>
+          </p>
+          <p className="text-sm text-gray-700">
+            구수:{" "}
+            <span className="font-medium text-gray-900">{gangCount}구</span>
+          </p>
+          <p className="text-sm text-gray-700">
+            모듈:{" "}
+            <span className="font-medium text-gray-900">
+              {selectedModules.some((m) => m)
+                ? selectedModules
+                    .filter((m): m is ModuleOption => Boolean(m))
+                    .map((m) => m.name)
+                    .join(", ")
+                : "미선택"}
+            </span>
+          </p>
+          {selectedBox && boxQuantity > 0 && (
+            <p className="text-sm text-gray-700">
+              매립박스:{" "}
+              <span className="font-medium text-gray-900">
+                {selectedBox.name} × {boxQuantity}
+              </span>
+            </p>
+          )}
+        </div>
+
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-gray-700">수량</span>
           <div className="flex items-center gap-3">
@@ -544,7 +532,7 @@ export default function BuildPage() {
           size="lg"
           className={cn(addedFeedback && "bg-green-600 hover:bg-green-600")}
         >
-          {addedFeedback ? "✓ 장바구니에 담겼어요!" : "장바구니에 담기"}
+          {addedFeedback ? "✓ 견적 바구니에 담겼어요!" : "견적 바구니에 담기"}
         </Button>
       </div>
 
@@ -556,6 +544,8 @@ export default function BuildPage() {
         onSelect={handleModuleSelect}
         showPrice={false}
         slotIndex={editingSlot}
+        colorName={selectedColor?.name ?? ''}
+        coverCodeMap={coverCodeMap}
       />
     </div>
   );

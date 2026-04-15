@@ -103,7 +103,13 @@ function parsePrice(value: string) {
 
 export async function readPricePartsMap() {
   const csvPath = path.join(process.cwd(), "price_parts_template.csv");
-  const raw = await readFile(csvPath, "utf8");
+  let raw: string;
+  try {
+    raw = await readFile(csvPath, "utf8");
+  } catch {
+    // CSV 파일 없으면 빈 맵 반환 → DB 가격 그대로 사용
+    return new Map<string, CsvPriceRow>();
+  }
   const rows = parseCsv(raw.replace(/^\uFEFF/, ""));
 
   if (rows.length < 2) {

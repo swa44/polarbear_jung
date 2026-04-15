@@ -35,11 +35,8 @@ export function formatPhone(phone: string): string {
   return phone
 }
 
-export function generateOrderNumber(): string {
-  const now = new Date()
-  const date = now.toISOString().slice(0, 10).replace(/-/g, '')
-  const rand = Math.floor(Math.random() * 9000) + 1000
-  return `JS-${date}-${rand}`
+export function generateQuoteToken(): string {
+  return crypto.randomUUID().replace(/-/g, '')
 }
 
 export function formatDate(dateStr: string): string {
@@ -53,15 +50,25 @@ export function formatDate(dateStr: string): string {
 }
 
 export const ORDER_STATUS_LABEL: Record<string, string> = {
-  pending: '접수됨',
-  confirmed: '확인됨',
+  pending: '접수됨(기존)',
+  confirmed: '확인됨(기존)',
+  quoted: '견적 발송',
+  shipping_info_submitted: '배송정보 입력',
+  waiting_deposit: '입금 대기',
+  paid: '입금 확인',
   shipped: '발송됨',
   cancelled: '취소됨',
+  expired: '만료됨',
 }
 
 export const ORDER_STATUS_COLOR: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
   confirmed: 'bg-blue-100 text-blue-800',
+  quoted: 'bg-yellow-100 text-yellow-800',
+  shipping_info_submitted: 'bg-blue-100 text-blue-800',
+  waiting_deposit: 'bg-indigo-100 text-indigo-800',
+  paid: 'bg-emerald-100 text-emerald-800',
   shipped: 'bg-green-100 text-green-800',
   cancelled: 'bg-gray-100 text-gray-500',
+  expired: 'bg-orange-100 text-orange-700',
 }

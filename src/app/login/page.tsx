@@ -188,7 +188,7 @@ export default function LoginPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-            맞춤형 융스위치 주문 시스템
+            맞춤형 융스위치 견적 시스템
           </h1>
           <p className="mt-2 text-gray-500 text-sm">주식회사 폴라베어</p>
         </div>
@@ -209,7 +209,7 @@ export default function LoginPage() {
           ) : step === "info" ? (
             <div className="flex flex-col gap-4">
               <h2 className="text-lg font-semibold text-gray-900">
-                주문자 정보 입력
+                고객 정보 입력
               </h2>
               <Input
                 label="이름"
@@ -319,7 +319,7 @@ export default function LoginPage() {
                     {confirmName}
                   </p>
                   <div className="mt-4 inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-500">
-                    이 이름으로 주문자 정보가 고정됩니다
+                    이 이름으로 고객 정보가 고정됩니다
                   </div>
                 </div>
               )}

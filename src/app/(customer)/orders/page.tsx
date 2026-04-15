@@ -30,7 +30,7 @@ function OrdersContent() {
   }
 
   const handleCancel = async (orderId: string) => {
-    if (!confirm('주문을 취소하시겠습니까?')) return
+    if (!confirm('견적을 취소하시겠습니까?')) return
     setCancellingId(orderId)
     try {
       const res = await fetch(`/api/orders/${orderId}`, { method: 'DELETE' })
@@ -50,22 +50,21 @@ function OrdersContent() {
 
   return (
     <div className="px-4 py-6 flex flex-col gap-4">
-      <h1 className="text-xl font-bold text-gray-900">내 주문</h1>
+      <h1 className="text-xl font-bold text-gray-900">내 견적</h1>
 
-      {/* 새 주문 완료 알림 */}
       {newOrderNumber && (
         <div className="bg-green-50 border border-green-200 rounded-2xl p-4">
-          <p className="text-sm font-semibold text-green-800">✓ 주문이 접수되었습니다!</p>
-          <p className="text-sm text-green-700 mt-1">주문번호: <span className="font-mono font-medium">{newOrderNumber}</span></p>
-          <p className="text-xs text-green-600 mt-1">담당자가 곧 연락드릴 예정입니다.</p>
+          <p className="text-sm font-semibold text-green-800">✓ 견적 요청이 접수되었습니다!</p>
+          <p className="text-sm text-green-700 mt-1">견적번호: <span className="font-mono font-medium">{newOrderNumber}</span></p>
+          <p className="text-xs text-green-600 mt-1">알림톡으로 전달된 링크에서 배송정보를 입력해 주세요.</p>
         </div>
       )}
 
       {orders.length === 0 ? (
         <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4">
           <Package className="w-16 h-16 text-gray-200" />
-          <p className="text-gray-500">아직 주문 내역이 없어요.</p>
-          <Link href="/build"><Button>첫 주문하기</Button></Link>
+          <p className="text-gray-500">아직 견적 내역이 없어요.</p>
+          <Link href="/build"><Button>첫 견적 구성하기</Button></Link>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -73,7 +72,6 @@ function OrdersContent() {
             const isExpanded = expandedId === order.id
             return (
               <div key={order.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-                {/* Order Header */}
                 <div
                   className="p-4 cursor-pointer"
                   onClick={() => setExpandedId(isExpanded ? null : order.id)}
@@ -85,7 +83,7 @@ function OrdersContent() {
                           {order.order_number}
                         </span>
                         <Badge className={ORDER_STATUS_COLOR[order.status]}>
-                          {ORDER_STATUS_LABEL[order.status]}
+                          {ORDER_STATUS_LABEL[order.status] || order.status}
                         </Badge>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">{formatDate(order.created_at)}</p>
@@ -108,10 +106,8 @@ function OrdersContent() {
                   </div>
                 </div>
 
-                {/* Expanded Detail */}
                 {isExpanded && (
                   <div className="border-t border-gray-100 px-4 py-3 flex flex-col gap-3">
-                    {/* Items */}
                     {order.order_items?.map((item) => (
                       <div key={item.id} className="text-sm">
                         <p className="font-medium text-gray-800">
@@ -130,26 +126,30 @@ function OrdersContent() {
                       </div>
                     ))}
 
-                    {/* Shipping */}
                     <div className="pt-2 border-t border-gray-100">
-                      <p className="text-xs text-gray-500">수신인</p>
-                      <p className="text-sm text-gray-800">{order.recipient_name || order.customer_name}</p>
-                      <p className="text-xs text-gray-500">배송지</p>
-                      <p className="text-sm text-gray-800">{order.shipping_address} {order.shipping_detail}</p>
+                      <p className="text-xs text-gray-500">합계 금액</p>
+                      <p className="text-sm text-gray-800 font-semibold">{formatPrice(order.total_price)}</p>
+                      {order.quote_expires_at && (
+                        <>
+                          <p className="text-xs text-gray-500 mt-2">유효기간</p>
+                          <p className="text-sm text-gray-800">{formatDate(order.quote_expires_at)}</p>
+                        </>
+                      )}
+                      {order.shipping_address && (
+                        <>
+                          <p className="text-xs text-gray-500 mt-2">배송지</p>
+                          <p className="text-sm text-gray-800">{order.shipping_address} {order.shipping_detail || ''}</p>
+                        </>
+                      )}
                     </div>
 
-                    {/* Tracking */}
-                    {order.tracking_number && (
-                      <div className="bg-blue-50 rounded-xl p-3">
-                        <p className="text-xs text-blue-600 font-medium">
-                          {order.tracking_company ? `${order.tracking_company} 송장번호` : '송장번호'}
-                        </p>
-                        <p className="text-sm font-mono font-semibold text-blue-800">{order.tracking_number}</p>
-                      </div>
+                    {order.quote_token && (
+                      <Link href={`/quotes/${order.quote_token}`}>
+                        <Button size="sm" variant="secondary">견적서 링크 열기</Button>
+                      </Link>
                     )}
 
-                    {/* Actions */}
-                    {order.status === 'pending' && (
+                    {['quoted', 'shipping_info_submitted', 'waiting_deposit'].includes(order.status) && (
                       <div className="flex gap-2 pt-1">
                         <Button
                           variant="danger"
@@ -157,7 +157,7 @@ function OrdersContent() {
                           loading={cancellingId === order.id}
                           onClick={() => handleCancel(order.id)}
                         >
-                          주문 취소
+                          견적 취소
                         </Button>
                       </div>
                     )}

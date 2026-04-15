@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
-import { notifyShipped } from '@/lib/telegram'
 import { ORDER_STATUS_LABEL } from '@/lib/utils'
 import { checkAdminAuth } from '@/lib/admin-auth'
 import { readFile } from 'fs/promises'
@@ -24,6 +23,7 @@ type OrderForExport = {
   customer_name: string
   customer_phone: string
   recipient_name: string | null
+  recipient_phone: string | null
   shipping_address: string
   shipping_detail: string | null
   status: string
@@ -113,6 +113,7 @@ export async function PATCH(req: NextRequest) {
     if (tracking_number !== undefined) updateData.tracking_number = tracking_number
     if (tracking_company !== undefined) updateData.tracking_company = tracking_company
     if (admin_memo !== undefined) updateData.admin_memo = admin_memo
+    if (status === 'paid') updateData.paid_at = new Date().toISOString()
     if (status === 'shipped') updateData.shipped_at = new Date().toISOString()
     if (status === 'cancelled') updateData.cancelled_at = new Date().toISOString()
 
@@ -125,11 +126,6 @@ export async function PATCH(req: NextRequest) {
 
     if (error) throw error
 
-    // 발송 처리 시 텔레그램 알림
-    if (status === 'shipped' && data) {
-      await notifyShipped(data)
-    }
-
     return NextResponse.json({ success: true, order: data })
   } catch (e) {
     console.error(e)
@@ -140,7 +136,7 @@ export async function PATCH(req: NextRequest) {
 function generateCsv(orders: OrderForExport[]): string {
   const BOM = '\uFEFF'
   const headers = [
-    '주문번호', '주문일시', '고객명', '연락처', '수신인', '배송지', '상세주소',
+    '견적번호', '요청일시', '고객명', '연락처', '수신인', '수신연락처', '배송지', '상세주소',
     '상태', '합계금액', '택배사', '송장번호', '상품내역',
   ]
 
@@ -158,6 +154,7 @@ function generateCsv(orders: OrderForExport[]): string {
       o.customer_name,
       o.customer_phone,
       o.recipient_name || o.customer_name,
+      o.recipient_phone || o.customer_phone,
       o.shipping_address,
       o.shipping_detail || '',
       ORDER_STATUS_LABEL[o.status] || o.status,
@@ -252,7 +249,7 @@ function generatePickingCsv(orders: OrderForExport[], bomRows: BomRow[]): string
     )
   }
 
-  const headers = ['품목코드', '제품명', '필요수량', '주문번호목록']
+  const headers = ['품목코드', '제품명', '필요수량', '견적번호목록']
   const body = Array.from(aggregate.values())
     .sort((a, b) => a.itemCode.localeCompare(b.itemCode))
     .map((row) =>

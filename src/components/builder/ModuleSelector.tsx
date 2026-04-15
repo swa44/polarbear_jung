@@ -1,6 +1,6 @@
 'use client'
 
-import { Module, ModuleCategory } from '@/types'
+import { ModuleCategory, ModuleOption } from '@/types'
 import { cn, formatPrice } from '@/lib/utils'
 import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
 import { X } from 'lucide-react'
@@ -10,10 +10,12 @@ import { useEffect, useRef, useState } from 'react'
 interface ModuleSelectorProps {
   open: boolean
   onClose: () => void
-  modules: Module[]
-  onSelect: (module: Module) => void
+  modules: ModuleOption[]
+  onSelect: (module: ModuleOption) => void
   showPrice: boolean
   slotIndex: number
+  colorName: string
+  coverCodeMap?: Record<string, string>
 }
 
 const CATEGORIES: ModuleCategory[] = ['스위치류', '콘센트류', '기타류']
@@ -25,6 +27,8 @@ export default function ModuleSelector({
   onSelect,
   showPrice,
   slotIndex,
+  colorName,
+  coverCodeMap = {},
 }: ModuleSelectorProps) {
   useLockBodyScroll(open)
   const [activeCategory, setActiveCategory] = useState<ModuleCategory>('스위치류')
@@ -32,14 +36,12 @@ export default function ModuleSelector({
   const loadedCategoryKeysRef = useRef<Set<string>>(new Set())
 
   const filtered = modules.filter((m) => m.category === activeCategory)
-  const categoryLoadKey = `${activeCategory}:${filtered.map((module) => `${module.id}:${module.image_url ?? 'no-image'}`).join('|')}`
+  const categoryLoadKey = `${activeCategory}:${colorName}:${filtered.map((m) => m.name).join('|')}`
 
   useEffect(() => {
     if (!open) return
 
-    const imageUrls = filtered
-      .map((module) => module.image_url)
-      .filter((src): src is string => Boolean(src))
+    const imageUrls = filtered.map((module) => `/modules/${colorName}/${coverCodeMap[`${module.name}||${colorName}`] ?? module.name.replaceAll('/', ':')}.webp`)
 
     if (imageUrls.length === 0 || loadedCategoryKeysRef.current.has(categoryLoadKey)) {
       setIsCategoryLoading(false)
@@ -68,7 +70,8 @@ export default function ModuleSelector({
     return () => {
       cancelled = true
     }
-  }, [open, categoryLoadKey, filtered])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, categoryLoadKey])
 
   if (!open) return null
 
@@ -82,7 +85,7 @@ export default function ModuleSelector({
 
       {/* Centered Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl flex flex-col" style={{ height: '60vh' }}>
+      <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl flex flex-col" style={{ height: '80vh' }}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3">
           <h3 className="text-base font-semibold text-gray-900">
@@ -124,23 +127,17 @@ export default function ModuleSelector({
             <div className="grid grid-cols-2 gap-3">
               {filtered.map((module) => (
                 <button
-                  key={module.id}
+                  key={module.name}
                   onClick={() => onSelect(module)}
                   className="flex flex-col items-center gap-3 p-4 rounded-xl border-2 border-gray-200 bg-white hover:border-gray-900 hover:bg-gray-50 transition-all active:scale-95"
                 >
-                  {module.image_url ? (
-                    <Image
-                      src={module.image_url}
-                      alt={module.name}
-                      width={72}
-                      height={72}
-                      className="object-cover w-16 h-16"
-                    />
-                  ) : (
-                    <div className="w-16 h-16 bg-gray-100 flex items-center justify-center">
-                      <span className="text-xs text-gray-400">이미지 없음</span>
-                    </div>
-                  )}
+                  <Image
+                    src={`/modules/${colorName}/${coverCodeMap[`${module.name}||${colorName}`] ?? module.name.replaceAll('/', ':')}.webp`}
+                    alt={module.name}
+                    width={72}
+                    height={72}
+                    className="object-cover w-16 h-16"
+                  />
                   <span className="text-sm font-medium text-gray-800 text-center leading-tight">
                     {module.name}
                   </span>

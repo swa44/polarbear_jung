@@ -79,7 +79,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   const navItems = [
-    { href: '/admin/orders', icon: ClipboardList, label: '주문관리' },
+    { href: '/admin/orders', icon: ClipboardList, label: '견적관리' },
     { href: '/admin/products', icon: Package, label: '상품관리' },
     { href: '/admin/settings', icon: Settings, label: '설정' },
   ]

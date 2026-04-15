@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCartStore } from "@/store/cartStore";
 import { useSessionStore } from "@/store/sessionStore";
-import { LogOut, ShoppingCart, Package, Wrench } from "lucide-react";
+import { LogOut, ShoppingCart, Package, Wrench, Boxes } from "lucide-react";
 import {
   clearStorefrontDataCache,
   warmStorefrontData,
@@ -30,14 +30,16 @@ export default function CustomerShell({
   useEffect(() => {
     warmStorefrontData();
     router.prefetch("/build");
+    router.prefetch("/single");
     router.prefetch("/cart");
     router.prefetch("/orders");
   }, [router]);
 
   const navItems = [
-    { href: "/build", icon: Wrench, label: "주문하기" },
-    { href: "/cart", icon: ShoppingCart, label: "장바구니" },
-    { href: "/orders", icon: Package, label: "내 주문" },
+    { href: "/build", icon: Wrench, label: "세트견적" },
+    { href: "/single", icon: Boxes, label: "낱개부품" },
+    { href: "/cart", icon: ShoppingCart, label: "견적바구니" },
+    { href: "/orders", icon: Package, label: "My견적" },
   ];
 
   const handleLogout = async () => {
@@ -52,6 +54,7 @@ export default function CustomerShell({
   const handleNavPrefetch = () => {
     warmStorefrontData();
     router.prefetch("/build");
+    router.prefetch("/single");
     router.prefetch("/cart");
     router.prefetch("/orders");
   };
@@ -105,7 +108,7 @@ export default function CustomerShell({
       <main className="max-w-lg mx-auto">{children}</main>
 
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-100 safe-bottom">
-        <div className="max-w-lg mx-auto grid grid-cols-3">
+        <div className="max-w-lg mx-auto grid grid-cols-4">
           {navItems.map(({ href, icon: Icon, label }) => {
             const isActive = pathname === href;
             return (
@@ -119,11 +122,18 @@ export default function CustomerShell({
                   e.preventDefault();
                   handleNavClick(href);
                 }}
-                className={`flex flex-col items-center gap-1 py-3 text-xs font-medium transition-colors ${
+                className={`relative flex flex-col items-center gap-1 py-3 text-xs font-medium transition-colors ${
                   isActive ? "text-gray-900" : "text-gray-400"
                 }`}
               >
-                <Icon className="w-5 h-5" />
+                <div className="relative">
+                  <Icon className="w-5 h-5" />
+                  {mounted && href === "/cart" && cartCount() > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-gray-900 text-white rounded-full w-5 h-5 flex items-center justify-center font-bold" style={{ fontSize: '11px', lineHeight: 1 }}>
+                      {cartCount() > 99 ? '99+' : cartCount()}
+                    </span>
+                  )}
+                </div>
                 {label}
               </Link>
             );

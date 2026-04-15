@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     // SMS 발송
     await sendSms(
       cleanPhone,
-      `[폴라베어] 융스위치 주문 시스템 인증번호: ${code} (3분 이내 입력)`,
+      `[폴라베어] 융스위치 견적 시스템 인증번호: ${code} (3분 이내 입력)`,
     );
 
     return NextResponse.json({ success: true });

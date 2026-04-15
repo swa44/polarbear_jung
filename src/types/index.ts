@@ -1,6 +1,31 @@
 export type MaterialType = 'plastic' | 'metal'
+
+export interface ModulePart {
+  id: string
+  module_name: string
+  color_name: string
+  part_code: string
+  part_name: string
+  price: number
+  category?: string | null
+  material_type?: string | null
+}
+
 export type ModuleCategory = '스위치류' | '콘센트류' | '기타류'
-export type OrderStatus = 'pending' | 'confirmed' | 'shipped' | 'cancelled'
+
+export interface ModuleOption {
+  name: string
+  category: ModuleCategory
+  price: number
+}
+export type OrderStatus =
+  | 'quoted'
+  | 'shipping_info_submitted'
+  | 'waiting_deposit'
+  | 'paid'
+  | 'shipped'
+  | 'cancelled'
+  | 'expired'
 
 export interface FrameColor {
   id: string
@@ -50,11 +75,18 @@ export interface ModuleSlotSelection {
 
 export interface CartItem {
   id: string // local uuid
+  item_type?: 'set' | 'single'
   gang_count: number
   frame_color: FrameColor
   modules: ModuleSlotSelection[] // length === gang_count
   embedded_box: EmbeddedBox | null
+  embedded_box_quantity?: number
   quantity: number
+  single_category?: 'frame' | 'insert' | 'cover' | 'box' | 'part'
+  single_name?: string
+  single_unit_price?: number
+  single_color_name?: string | null
+  single_part_code?: string | null
 }
 
 export interface Order {
@@ -63,6 +95,7 @@ export interface Order {
   customer_name: string
   customer_phone: string
   recipient_name: string | null
+  recipient_phone: string | null
   shipping_address: string
   shipping_detail: string | null
   status: OrderStatus
@@ -70,6 +103,11 @@ export interface Order {
   tracking_company: string | null
   tracking_number: string | null
   admin_memo: string | null
+  quote_token: string | null
+  quote_expires_at: string | null
+  quoted_at: string | null
+  shipping_submitted_at: string | null
+  paid_at: string | null
   cancelled_at: string | null
   shipped_at: string | null
   created_at: string
@@ -92,9 +130,4 @@ export interface OrderItem {
   item_price: number
   total_price: number
   created_at: string
-}
-
-export interface Settings {
-  show_price: boolean
-  telegram_enabled: boolean
 }

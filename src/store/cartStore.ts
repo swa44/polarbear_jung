@@ -43,10 +43,18 @@ export const useCartStore = create<CartStore>()(
 
       totalPrice: () =>
         get().items.reduce((sum, item) => {
+          if (item.item_type === 'single') {
+            const unit = item.single_unit_price ?? 0
+            return sum + unit * item.quantity
+          }
+
           const framePrice = getFrameColorPrice(item.frame_color, item.gang_count)
           const modulesPrice = item.modules.reduce((s, m) => s + m.module_price, 0)
           const boxPrice = item.embedded_box?.price ?? 0
-          return sum + (framePrice + modulesPrice + boxPrice) * item.quantity
+          const boxQuantity = item.embedded_box ? (item.embedded_box_quantity ?? 1) : 0
+          const setTotal = (framePrice + modulesPrice) * item.quantity
+          const boxTotal = boxPrice * boxQuantity
+          return sum + setTotal + boxTotal
         }, 0),
     }),
     {

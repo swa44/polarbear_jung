@@ -11,10 +11,12 @@ import { Download, ChevronDown, ChevronUp } from 'lucide-react'
 
 const STATUS_FILTERS = [
   { value: 'all', label: '전체' },
-  { value: 'pending', label: '접수됨' },
-  { value: 'confirmed', label: '확인됨' },
+  { value: 'quoted', label: '견적 발송' },
+  { value: 'waiting_deposit', label: '입금 대기' },
+  { value: 'paid', label: '입금 확인' },
   { value: 'shipped', label: '발송됨' },
   { value: 'cancelled', label: '취소됨' },
+  { value: 'expired', label: '만료됨' },
 ]
 
 export default function AdminOrdersPage() {
@@ -25,7 +27,6 @@ export default function AdminOrdersPage() {
   const [savingId, setSavingId] = useState<string | null>(null)
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([])
 
-  // Edit state
   const [editMemo, setEditMemo] = useState<Record<string, string>>({})
   const [editTracking, setEditTracking] = useState<Record<string, string>>({})
   const [editTrackingCompany, setEditTrackingCompany] = useState<Record<string, string>>({})
@@ -133,7 +134,7 @@ export default function AdminOrdersPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">주문 관리</h1>
+        <h1 className="text-2xl font-bold text-gray-900">견적 관리</h1>
         <div className="flex items-center gap-2">
           <Button
             variant="secondary"
@@ -164,7 +165,6 @@ export default function AdminOrdersPage() {
         </div>
       </div>
 
-      {/* Status Filter */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
         {STATUS_FILTERS.map(({ value, label }) => (
           <button
@@ -186,14 +186,13 @@ export default function AdminOrdersPage() {
           <div className="w-8 h-8 border-2 border-gray-900 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : orders.length === 0 ? (
-        <div className="text-center text-gray-400 py-16">주문이 없습니다.</div>
+        <div className="text-center text-gray-400 py-16">견적이 없습니다.</div>
       ) : (
         <div className="flex flex-col gap-3">
           {orders.map((order) => {
             const isExpanded = expandedId === order.id
             return (
               <div key={order.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-                {/* Header */}
                 <div
                   className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
                   onClick={() => setExpandedId(isExpanded ? null : order.id)}
@@ -211,7 +210,7 @@ export default function AdminOrdersPage() {
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-mono text-sm font-semibold text-gray-900">{order.order_number}</span>
-                        <Badge className={ORDER_STATUS_COLOR[order.status]}>{ORDER_STATUS_LABEL[order.status]}</Badge>
+                        <Badge className={ORDER_STATUS_COLOR[order.status]}>{ORDER_STATUS_LABEL[order.status] || order.status}</Badge>
                       </div>
                       <p className="text-sm text-gray-700 mt-1">
                         {order.customer_name} · {formatPhone(order.customer_phone)}
@@ -225,12 +224,10 @@ export default function AdminOrdersPage() {
                   </div>
                 </div>
 
-                {/* Expanded */}
                 {isExpanded && (
                   <div className="border-t border-gray-100 px-4 py-4 flex flex-col gap-4">
-                    {/* Order Items */}
                     <div>
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">주문 상품</p>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">견적 상품</p>
                       {order.order_items?.map((item) => (
                         <div key={item.id} className="text-sm py-2 border-b border-gray-100 last:border-0">
                           <p className="font-medium text-gray-900">
@@ -251,14 +248,21 @@ export default function AdminOrdersPage() {
                       ))}
                     </div>
 
-                    {/* Shipping */}
                     <div>
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">배송지</p>
-                      <p className="text-sm text-gray-700 mb-1">수신인: {order.recipient_name || order.customer_name}</p>
-                      <p className="text-sm text-gray-800">{order.shipping_address} {order.shipping_detail}</p>
+                      {order.shipping_address ? (
+                        <>
+                          <p className="text-sm text-gray-700 mb-1">수신인: {order.recipient_name || order.customer_name}</p>
+                          {order.recipient_phone && (
+                            <p className="text-sm text-gray-700 mb-1">수신 연락처: {formatPhone(order.recipient_phone)}</p>
+                          )}
+                          <p className="text-sm text-gray-800">{order.shipping_address} {order.shipping_detail || ''}</p>
+                        </>
+                      ) : (
+                        <p className="text-sm text-gray-500">고객 배송정보 입력 대기</p>
+                      )}
                     </div>
 
-                    {/* Tracking */}
                     <div>
                       <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">택배사 / 송장번호</label>
                       <div className="grid grid-cols-1 sm:grid-cols-[140px_1fr_auto] gap-2 mt-1">
@@ -276,19 +280,18 @@ export default function AdminOrdersPage() {
                           onChange={(e) => setEditTracking((prev) => ({ ...prev, [order.id]: e.target.value }))}
                           className="px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-gray-900"
                         />
-                        {order.status !== 'shipped' && (
+                        {order.status !== 'shipped' && order.status === 'paid' && (
                           <Button
                             size="sm"
                             loading={savingId === order.id}
                             onClick={() => handleShip(order.id)}
                           >
-                            발송 처리
+                            출고 처리
                           </Button>
                         )}
                       </div>
                     </div>
 
-                    {/* Memo */}
                     <div>
                       <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">내부 메모</label>
                       <div className="flex gap-2 mt-1">
@@ -310,18 +313,17 @@ export default function AdminOrdersPage() {
                       </div>
                     </div>
 
-                    {/* Status Actions */}
-                    {['pending', 'confirmed', 'shipped'].includes(order.status) && (
-                      <div className="flex gap-2">
-                        {order.status === 'pending' && (
-                          <Button
-                            size="sm"
-                            loading={savingId === order.id}
-                            onClick={() => handleUpdateStatus(order.id, 'confirmed')}
-                          >
-                            주문 확인
-                          </Button>
-                        )}
+                    <div className="flex gap-2">
+                      {order.status === 'waiting_deposit' && (
+                        <Button
+                          size="sm"
+                          loading={savingId === order.id}
+                          onClick={() => handleUpdateStatus(order.id, 'paid')}
+                        >
+                          입금 확인
+                        </Button>
+                      )}
+                      {['quoted', 'shipping_info_submitted', 'waiting_deposit', 'paid'].includes(order.status) && (
                         <Button
                           size="sm"
                           variant="danger"
@@ -330,8 +332,8 @@ export default function AdminOrdersPage() {
                         >
                           취소
                         </Button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

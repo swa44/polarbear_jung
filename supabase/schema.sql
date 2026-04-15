@@ -70,10 +70,26 @@ CREATE TABLE orders (
   customer_name TEXT NOT NULL,
   customer_phone TEXT NOT NULL,
   recipient_name TEXT,
-  shipping_address TEXT NOT NULL,
+  recipient_phone TEXT,
+  shipping_address TEXT NOT NULL DEFAULT '',
   shipping_detail TEXT,
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'shipped', 'cancelled')),
+  status TEXT NOT NULL DEFAULT 'quoted' CHECK (status IN (
+    'pending',
+    'confirmed',
+    'quoted',
+    'shipping_info_submitted',
+    'waiting_deposit',
+    'paid',
+    'shipped',
+    'cancelled',
+    'expired'
+  )),
   total_price INTEGER NOT NULL DEFAULT 0,
+  quote_token TEXT UNIQUE,
+  quote_expires_at TIMESTAMPTZ,
+  quoted_at TIMESTAMPTZ,
+  shipping_submitted_at TIMESTAMPTZ,
+  paid_at TIMESTAMPTZ,
   tracking_company TEXT,
   tracking_number TEXT,
   admin_memo TEXT,
@@ -114,8 +130,7 @@ CREATE TABLE settings (
 
 -- 설정 기본값
 INSERT INTO settings (key, value) VALUES
-  ('show_price', 'true'),
-  ('telegram_enabled', 'false');
+  ('show_price', 'true');
 
 -- 프레임 색상 (듀로플라스틱)
 INSERT INTO frame_colors (name, material_type, price, price_1, price_2, price_3, price_4, price_5, sort_order) VALUES

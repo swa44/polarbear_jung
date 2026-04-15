@@ -7,7 +7,7 @@ import { FrameColor, Module, EmbeddedBox, MaterialType, ModuleCategory } from '@
 import { formatPrice } from '@/lib/utils'
 import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
 import Button from '@/components/ui/Button'
-import { Plus, Pencil, Trash2, Eye, EyeOff } from 'lucide-react'
+import { Plus, Pencil, Trash2, Eye, EyeOff, ImageOff } from 'lucide-react'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 
@@ -92,6 +92,17 @@ export default function AdminProductsPage() {
       })
       loadData()
     }
+    setUploadingId(null)
+  }
+
+  const handleImageRemove = async (table: string, id: string) => {
+    setUploadingId(id)
+    await fetch('/api/admin/products', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ table, id, data: { image_url: null } }),
+    })
+    await loadData()
     setUploadingId(null)
   }
 
@@ -329,6 +340,14 @@ export default function AdminProductsPage() {
 
                     <div className="flex flex-col gap-1" onClick={(e) => e.stopPropagation()}>
                       <button
+                        onClick={() => handleImageRemove('frame_colors', color.id)}
+                        disabled={!color.image_url}
+                        title="이미지 삭제"
+                        className="p-1 rounded-lg hover:bg-amber-50 text-amber-500 disabled:opacity-40 disabled:hover:bg-transparent"
+                      >
+                        <ImageOff className="w-3.5 h-3.5" />
+                      </button>
+                      <button
                         onClick={() => handleToggleActive('frame_colors', color)}
                         className="p-1 rounded-lg hover:bg-gray-100 text-gray-400"
                       >
@@ -463,6 +482,14 @@ export default function AdminProductsPage() {
 
                       <div className="flex flex-col gap-1">
                         <button
+                          onClick={() => handleImageRemove('modules', module.id)}
+                          disabled={!module.image_url}
+                          title="이미지 삭제"
+                          className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-500 disabled:opacity-40 disabled:hover:bg-transparent"
+                        >
+                          <ImageOff className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => handleToggleActive('modules', module)}
                           className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"
                         >
@@ -550,6 +577,14 @@ export default function AdminProductsPage() {
                   )}
                 </div>
                 <div className="flex flex-col gap-1">
+                  <button
+                    onClick={() => handleImageRemove('embedded_boxes', box.id)}
+                    disabled={!box.image_url}
+                    title="이미지 삭제"
+                    className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-500 disabled:opacity-40 disabled:hover:bg-transparent"
+                  >
+                    <ImageOff className="w-4 h-4" />
+                  </button>
                   <button
                     onClick={() => handleToggleActive('embedded_boxes', box)}
                     className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"
