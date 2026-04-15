@@ -313,7 +313,16 @@ export default function AdminOrdersPage() {
                       </div>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
+                      {order.quote_token && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => window.open(`/quotes/${order.quote_token}`, '_blank')}
+                        >
+                          견적서 열람
+                        </Button>
+                      )}
                       {order.status === 'waiting_deposit' && (
                         <Button
                           size="sm"

@@ -143,11 +143,6 @@ function OrdersContent() {
                       )}
                     </div>
 
-                    {order.quote_token && (
-                      <Link href={`/quotes/${order.quote_token}`}>
-                        <Button size="sm" variant="secondary">견적서 링크 열기</Button>
-                      </Link>
-                    )}
 
                     {['quoted', 'shipping_info_submitted', 'waiting_deposit'].includes(order.status) && (
                       <div className="flex gap-2 pt-1">
