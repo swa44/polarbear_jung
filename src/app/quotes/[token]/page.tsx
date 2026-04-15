@@ -61,9 +61,11 @@ export default function QuotePage() {
   }, [data]);
 
   useEffect(() => {
-    fetch('/api/module-parts')
+    fetch("/api/module-parts")
       .then((r) => r.json())
-      .then(({ parts: p }) => { if (p) setParts(p); })
+      .then(({ parts: p }) => {
+        if (p) setParts(p);
+      })
       .catch(() => {});
   }, []);
 
@@ -271,6 +273,24 @@ export default function QuotePage() {
           )}
         </section>
 
+        <section className="bg-white rounded-2xl border border-gray-100 p-5">
+          <p className="text-xs font-semibold text-gray-500 mb-3">공급자</p>
+          <div className="flex flex-col gap-1.5">
+            <div className="flex gap-2 text-sm">
+              <span className="text-gray-500 w-20 shrink-0">상호명</span>
+              <span className="text-gray-800 font-medium">주식회사 폴라베어</span>
+            </div>
+            <div className="flex gap-2 text-sm">
+              <span className="text-gray-500 w-20 shrink-0">등록번호</span>
+              <span className="text-gray-800">883-87-01986</span>
+            </div>
+            <div className="flex gap-2 text-sm">
+              <span className="text-gray-500 w-20 shrink-0">소재지</span>
+              <span className="text-gray-800">대전 유성구 반석로 148 전면 1층</span>
+            </div>
+          </div>
+        </section>
+
         <section className="bg-white rounded-2xl border border-blue-200 p-5">
           <p className="text-sm font-semibold text-gray-700 mb-3">견적 항목</p>
           <div className="flex flex-col gap-3">
@@ -291,29 +311,49 @@ export default function QuotePage() {
                     <div className="flex flex-col gap-2">
                       {/* 프레임 */}
                       <div className="flex justify-between text-xs">
-                        <span className="text-gray-600">{item.gang_count}구 프레임 · {item.frame_color_name}</span>
-                        <span className="font-medium text-gray-800">{formatPrice(item.frame_color_price)}</span>
+                        <span className="text-gray-600">
+                          {item.gang_count}구 프레임 · {item.frame_color_name}
+                        </span>
+                        <span className="font-medium text-gray-800">
+                          {formatPrice(item.frame_color_price)}
+                        </span>
                       </div>
 
                       {/* 모듈별 부품 내역 */}
                       {item.modules.map((m, i) => {
                         const moduleParts = parts.filter(
-                          (p) => p.module_name === m.module_name && p.color_name === item.frame_color_name
+                          (p) =>
+                            p.module_name === m.module_name &&
+                            p.color_name === item.frame_color_name,
                         );
                         return (
-                          <div key={`${item.id}-m${i}`} className="flex flex-col gap-0.5">
-                            <p className="text-xs font-semibold text-gray-700">{m.module_name}</p>
+                          <div
+                            key={`${item.id}-m${i}`}
+                            className="flex flex-col gap-0.5"
+                          >
+                            <p className="text-xs font-semibold text-gray-700">
+                              {m.module_name}
+                            </p>
                             {moduleParts.length > 0 ? (
                               moduleParts.map((p) => (
-                                <div key={p.id} className="flex justify-between text-xs pl-2">
-                                  <span className="text-gray-500">{p.part_name}</span>
-                                  <span className="text-gray-700">{formatPrice(p.price)}</span>
+                                <div
+                                  key={p.id}
+                                  className="flex justify-between text-xs pl-2"
+                                >
+                                  <span className="text-gray-500">
+                                    {p.part_name}
+                                  </span>
+                                  <span className="text-gray-700">
+                                    {formatPrice(p.price)}
+                                  </span>
                                 </div>
                               ))
                             ) : (
                               <div className="flex justify-between text-xs pl-2">
                                 <span className="text-gray-500">모듈</span>
-                                <span className="text-gray-700">{formatPrice(m.module_price)}</span>
+                                <span className="text-gray-700">
+                                  {formatPrice(m.module_price)}
+                                </span>
                               </div>
                             )}
                           </div>
@@ -323,8 +363,12 @@ export default function QuotePage() {
                       {/* 매립박스 */}
                       {item.embedded_box_name && (
                         <div className="flex justify-between text-xs">
-                          <span className="text-gray-600">매립박스 · {item.embedded_box_name}</span>
-                          <span className="font-medium text-gray-800">{formatPrice(item.embedded_box_price)}</span>
+                          <span className="text-gray-600">
+                            매립박스 · {item.embedded_box_name}
+                          </span>
+                          <span className="font-medium text-gray-800">
+                            {formatPrice(item.embedded_box_price)}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -374,7 +418,8 @@ export default function QuotePage() {
             주문서는 삭제됩니다.
           </p>
           <p className="text-sm text-red-600 mt-1">
-            ･배송요청이 접수된 견적서는 자료증빙을 위해 저장됩니다.
+            ･배송요청이 접수된 견적서는 <br></br> &nbsp;&nbsp;자료증빙을 위해
+            저장됩니다.
           </p>
           <p className="text-sm text-red-600 mt-1">
             ･입금 후 배송정보입력을 해주셔야 출고가 진행됩니다.
