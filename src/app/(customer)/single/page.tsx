@@ -325,11 +325,15 @@ export default function SingleQuotePage() {
     let cartItem: CartItem | null = null;
 
     if (selection.type === "frame") {
+      const partCode = allParts.find(
+        (p) => p.module_name === `${selection.gang}구` && p.color_name === selectedColor.name,
+      )?.part_code ?? null;
       cartItem = {
         id: uuidv4(),
         item_type: "single",
         gang_count: selection.gang,
         frame_color: selectedColor,
+        image_url: partCode ? `/modules/${selectedColor.name}/${partCode}.webp` : null,
         modules: [],
         embedded_box: null,
         quantity,
@@ -337,12 +341,7 @@ export default function SingleQuotePage() {
         single_name: framePartName ?? `프레임 ${selection.gang}구`,
         single_unit_price: getFrameColorPrice(selectedColor, selection.gang),
         single_color_name: selectedColor.name,
-        single_part_code:
-          allParts.find(
-            (p) =>
-              p.module_name === `${selection.gang}구` &&
-              p.color_name === selectedColor.name,
-          )?.part_code ?? null,
+        single_part_code: partCode,
       };
     } else if (selection.type === "part") {
       cartItem = {
@@ -350,6 +349,7 @@ export default function SingleQuotePage() {
         item_type: "single",
         gang_count: 1,
         frame_color: selectedColor,
+        image_url: `/modules/${selectedColor.name}/${selection.part.part_code}.webp`,
         modules: [],
         embedded_box: null,
         quantity,
@@ -365,6 +365,7 @@ export default function SingleQuotePage() {
         item_type: "single",
         gang_count: 1,
         frame_color: selectedColor ?? frameColors[0],
+        image_url: selection.box.image_url ?? null,
         modules: [],
         embedded_box: selection.box,
         quantity,

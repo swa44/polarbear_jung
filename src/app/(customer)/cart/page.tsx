@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useCartStore } from "@/store/cartStore";
 import { useRouter } from "next/navigation";
 import { formatPrice, getFrameColorPrice } from "@/lib/utils";
@@ -11,71 +11,23 @@ import OrderSummaryModal from "@/components/cart/OrderSummaryModal";
 import Image from "next/image";
 import { CartItem } from "@/types";
 
-const BOX_IMAGE_BY_NAME: Record<string, string> = {
-  "메탈사각박스": "/boxes/BS6042M-50.webp",
-  "원형박스(H47)": "/boxes/9063-02.webp",
-  "원형박스(H61)": "/boxes/9064-02.webp",
-  "2구원형박스(H48)": "/boxes/9252-22.webp",
-  "3구원형박스(H48)": "/boxes/9253-22.webp",
-  "4구원형박스(H48)": "/boxes/9254-22.webp",
-};
-
-function normalizeBoxName(name: string) {
-  return name.replace(/\s+/g, "").trim();
-}
-
-function resolveEmbeddedBoxImage(box: CartItem["embedded_box"]) {
-  if (!box) return null;
-
-  if (box.image_url?.startsWith("/boxes/")) return box.image_url;
-
-  const normalizedTarget = normalizeBoxName(box.name);
-  const matchedKey = Object.keys(BOX_IMAGE_BY_NAME).find((key) => {
-    const normalizedKey = normalizeBoxName(key);
-    return (
-      normalizedKey === normalizedTarget ||
-      normalizedTarget.includes(normalizedKey) ||
-      normalizedKey.includes(normalizedTarget)
-    );
-  });
-  if (matchedKey) return BOX_IMAGE_BY_NAME[matchedKey];
-
-  return box.image_url;
-}
-
 function SingleItemImage({ item }: { item: CartItem }) {
-  const [stage, setStage] = useState(0);
+  const [errored, setErrored] = useState(false);
 
-  if (item.single_category === "box") {
-    const boxSrc = resolveEmbeddedBoxImage(item.embedded_box);
-    if (!boxSrc) {
-      return <div className="w-14 h-14 bg-gray-200 rounded" />;
-    }
+  // image_url이 담기 시점에 저장되어 있으면 바로 사용
+  const primarySrc = item.image_url
+    ?? (item.single_category !== 'box' && item.single_part_code && item.single_color_name
+        ? `/modules/${item.single_color_name}/${item.single_part_code}.webp`
+        : (item.embedded_box?.image_url ?? null));
 
-    return (
-      <Image
-        src={boxSrc}
-        alt={item.single_name ?? ""}
-        width={56}
-        height={56}
-        className="w-14 h-14 object-contain"
-      />
-    );
-  }
+  // 에러 시 box가 아닌 경우 inserts 경로로 폴백
+  const fallbackSrc = (item.single_category !== 'box' && item.single_part_code)
+    ? `/inserts/${item.single_part_code}.webp`
+    : null;
 
-  const src = (() => {
-    if ((item.single_category === 'frame' || item.single_category === 'part') && item.single_part_code) {
-      if (stage === 0) return `/modules/${item.single_color_name}/${item.single_part_code}.webp`;
-      if (stage === 1) return `/inserts/${item.single_part_code}.webp`;
-    }
-    return null;
-  })();
+  const src = errored ? fallbackSrc : primarySrc;
 
-  const isFrame = item.single_category === 'frame';
-
-  if (!src || stage >= 2) {
-    return <div className="w-14 h-14 bg-gray-200 rounded" />;
-  }
+  if (!src) return <div className="w-14 h-14 bg-gray-200 rounded" />;
 
   return (
     <Image
@@ -84,8 +36,8 @@ function SingleItemImage({ item }: { item: CartItem }) {
       alt={item.single_name ?? ''}
       width={56}
       height={56}
-      className={`w-14 h-14 ${isFrame ? 'object-contain' : 'object-cover'}`}
-      onError={() => setStage((s) => s + 1)}
+      className={`w-14 h-14 ${item.single_category === 'frame' ? 'object-contain' : 'object-cover'}`}
+      onError={() => setErrored(true)}
     />
   );
 }
@@ -97,21 +49,6 @@ export default function CartPage() {
 
   const showPrice = false;
   const [showSummary, setShowSummary] = useState(false);
-  const [coverCodeMap, setCoverCodeMap] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    fetch('/api/module-parts')
-      .then((r) => r.json())
-      .then(({ parts }) => {
-        const map: Record<string, string> = {};
-        for (const p of parts ?? []) {
-          if (p.part_name.includes('커버') || p.part_name.includes('프레임')) {
-            map[`${p.module_name}||${p.color_name}`] = p.part_code;
-          }
-        }
-        setCoverCodeMap(map);
-      });
-  }, []);
 
 
   const handleQuoteClick = () => {
@@ -243,7 +180,7 @@ export default function CartPage() {
                     {/* 프레임 이미지 */}
                     <div className="flex flex-col items-center justify-start gap-1.5 text-[11px] bg-gray-100 text-gray-700 px-2 py-2 rounded-md">
                       <Image
-                        src={`/modules/${item.frame_color.name}/${coverCodeMap[`${item.gang_count}구||${item.frame_color.name}`] ?? `${item.gang_count}구`}.webp`}
+                        src={item.image_url ?? `/modules/${item.frame_color.name}/${item.gang_count}구.webp`}
                         alt={`${item.frame_color.name} ${item.gang_count}구`}
                         width={56}
                         height={56}
@@ -260,7 +197,7 @@ export default function CartPage() {
                         className="flex flex-col items-center justify-start gap-1.5 text-[11px] bg-gray-100 text-gray-700 px-2 py-2 rounded-md"
                       >
                         <Image
-                          src={`/modules/${item.frame_color.name}/${coverCodeMap[`${m.module_name}||${item.frame_color.name}`] ?? m.module_name.replaceAll('/', ':')}.webp`}
+                          src={m.image_url ?? `/modules/${item.frame_color.name}/${m.module_name.replaceAll('/', ':')}.webp`}
                           alt={m.module_name}
                           width={56}
                           height={56}

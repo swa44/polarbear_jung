@@ -5,6 +5,12 @@ type SendQuoteAlimtalkInput = {
   quoteUrl: string
 }
 
+type SendShippingAlimtalkInput = {
+  to: string
+  trackingCompany: string
+  trackingNumber: string
+}
+
 const API_URL = process.env.BIZGO_API_URL
 const API_KEY = process.env.BIZGO_API_KEY
 const ALIMTALK_SENDER_KEY = process.env.ALIMTALK_SENDER_KEY
@@ -100,6 +106,59 @@ export async function sendQuoteAlimtalk(input: SendQuoteAlimtalkInput): Promise<
     return true
   } catch (e) {
     console.error('Alimtalk send exception:', e)
+    return false
+  }
+}
+
+export async function sendShippingAlimtalk(input: SendShippingAlimtalkInput): Promise<boolean> {
+  if (!API_URL || !API_KEY || !ALIMTALK_SENDER_KEY) {
+    console.error('[Alimtalk Skip] Missing env for shipping alimtalk')
+    console.log('[Alimtalk Skip] to:', input.to, 'tracking:', input.trackingCompany, input.trackingNumber)
+    return false
+  }
+
+  const payload = {
+    messageFlow: [
+      {
+        alimtalk: {
+          senderKey: ALIMTALK_SENDER_KEY,
+          templateCode: 'SHIPJUNG',
+          sendType: 'template',
+        },
+      },
+    ],
+    destinations: [
+      {
+        to: input.to,
+        replaceWords: {
+          택배사: input.trackingCompany,
+          송장번호: input.trackingNumber,
+        },
+      },
+    ],
+  }
+
+  try {
+    console.log('[Alimtalk Send] shipping to:', input.to, 'tracking:', input.trackingCompany, input.trackingNumber)
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: API_KEY,
+      },
+      body: JSON.stringify(payload),
+    })
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => '')
+      console.error('Shipping alimtalk failed:', res.status, body)
+      return false
+    }
+
+    console.log('[Alimtalk Sent] shipping success')
+    return true
+  } catch (e) {
+    console.error('Shipping alimtalk exception:', e)
     return false
   }
 }

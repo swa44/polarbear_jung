@@ -234,29 +234,21 @@ export async function POST(req: NextRequest) {
     }
 
     const targetColorKey = normalizeName(next.color_name)
-    const targetMaterialKey = normalizeMaterialKey(next.material_type)
     const targetModuleNameKey = normalizeName(next.module_name)
-    const targetPartNameKey = normalizeName(next.part_name)
 
-    const candidates = partsPool.filter((p) => {
-      const colorMatched = normalizeName(p.color_name) === targetColorKey
-      const materialMatched =
-        normalizeMaterialKey(p.material_type) === targetMaterialKey
-      return colorMatched && materialMatched
-    })
+    // 1순위: (module_name + color_name) 정확 일치
+    const matchedByName = partsPool.find(
+      (p) =>
+        normalizeName(p.module_name) === targetModuleNameKey &&
+        normalizeName(p.color_name) === targetColorKey,
+    ) ?? null
 
-    const matchedByPartName =
-      candidates.find((p) => normalizeName(p.part_name) === targetPartNameKey) ??
-      null
-    const moduleMatchedCandidates = candidates.filter(
-      (p) => normalizeName(p.module_name) === targetModuleNameKey,
-    )
-    const matchedByModuleName =
-      moduleMatchedCandidates.length === 1 ? moduleMatchedCandidates[0] : null
-    const matchedByCode =
-      candidates.find((p) => p.part_code === next.part_code) ?? null
+    // 2순위: part_code 정확 일치 (이름이 바뀐 경우 대비)
+    const matchedByCode = !matchedByName
+      ? (partsPool.find((p) => p.part_code === next.part_code) ?? null)
+      : null
 
-    const matched = matchedByPartName ?? matchedByModuleName ?? matchedByCode
+    const matched = matchedByName ?? matchedByCode
 
     if (matched) {
       const { error: updateErr } = await supabase

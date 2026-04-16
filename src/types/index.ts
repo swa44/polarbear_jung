@@ -73,6 +73,7 @@ export interface ModuleSlotSelection {
   module_id: string
   module_name: string
   module_price: number
+  image_url?: string | null
 }
 
 export interface CartItem {
@@ -80,6 +81,7 @@ export interface CartItem {
   item_type?: 'set' | 'single'
   gang_count: number
   frame_color: FrameColor
+  image_url?: string | null  // resolved at add-to-cart time
   modules: ModuleSlotSelection[] // length === gang_count
   embedded_box: EmbeddedBox | null
   embedded_box_quantity?: number

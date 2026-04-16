@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { ORDER_STATUS_LABEL } from '@/lib/utils'
 import { checkAdminAuth } from '@/lib/admin-auth'
+import { sendShippingAlimtalk } from '@/lib/alimtalk'
 import { readFile } from 'fs/promises'
 import path from 'path'
 
@@ -126,6 +127,14 @@ export async function PATCH(req: NextRequest) {
       .single()
 
     if (error) throw error
+
+    if (status === 'shipped' && data.customer_phone && tracking_company && tracking_number) {
+      sendShippingAlimtalk({
+        to: data.customer_phone,
+        trackingCompany: tracking_company,
+        trackingNumber: tracking_number,
+      }).catch((e) => console.error('[Shipping alimtalk error]', e))
+    }
 
     return NextResponse.json({ success: true, order: data })
   } catch (e) {

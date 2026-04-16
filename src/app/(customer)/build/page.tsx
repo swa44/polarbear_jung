@@ -231,17 +231,36 @@ export default function BuildPage() {
   const handleAddToCart = () => {
     if (!canAddToCart || !selectedColor) return;
 
+    const colorName = selectedColor.name;
+
+    // 담기 시점에 이미지 URL 결정 (카트 페이지에서 API 재호출 불필요)
+    const imageCodeMap: Record<string, string> = {};
+    for (const p of allParts) {
+      if (p.part_name.includes('커버') || p.part_name.includes('프레임')) {
+        imageCodeMap[`${p.module_name}||${p.color_name}`] = p.part_code;
+      }
+    }
+
+    const framePartCode = imageCodeMap[`${gangCount}구||${colorName}`] ?? `${gangCount}구`;
+    const frameImageUrl = `/modules/${colorName}/${framePartCode}.webp`;
+
     const cartItem: CartItem = {
       id: uuidv4(),
       item_type: "set",
       gang_count: gangCount,
       frame_color: selectedColor,
-      modules: selectedModules.map((m, i) => ({
-        slot: i + 1,
-        module_id: m!.name,
-        module_name: m!.name,
-        module_price: m!.price,
-      })),
+      image_url: frameImageUrl,
+      modules: selectedModules.map((m, i) => {
+        const coverCode = imageCodeMap[`${m!.name}||${colorName}`] ?? m!.name.replaceAll('/', ':');
+        const moduleImageUrl = moduleImageByKey[`${m!.name}||${colorName}`] || `/modules/${colorName}/${coverCode}.webp`;
+        return {
+          slot: i + 1,
+          module_id: m!.name,
+          module_name: m!.name,
+          module_price: m!.price,
+          image_url: moduleImageUrl,
+        };
+      }),
       embedded_box: selectedBox,
       embedded_box_quantity: selectedBox ? boxQuantity : 0,
       quantity,
