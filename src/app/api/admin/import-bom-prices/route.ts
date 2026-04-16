@@ -210,19 +210,33 @@ export async function POST(req: NextRequest) {
     else notFound.push(`매립박스 업데이트 실패: ${r.상품명}`)
   }
 
-  // ── 3. module_parts 매칭 행만 업데이트 + 없으면 추가 ────────
+  // ── 3. module_parts 일괄 교체 (CSV에 있는 행만 delete → insert) ─
+  // 개별 UPDATE 루프 대신 "해당 행 삭제 + 전체 재삽입" 2회 호출로 타임아웃 방지
   const incomingPartRows = [...frameRows, ...moduleRows]
   const { data: existingParts, error: partsReadErr } = await supabase
     .from('module_parts')
-    .select('id, module_name, color_name, part_code, part_name, category, material_type')
+    .select('id, module_name, color_name, part_code')
   if (partsReadErr) throw partsReadErr
 
-  const partsPool = [...(existingParts ?? [])]
-  let partsUpdated = 0
-  let partsInserted = 0
+  const existingPool = existingParts ?? []
 
-  for (const r of incomingPartRows) {
-    const next = {
+  // CSV에 있는 행과 매칭되는 기존 ID 수집 (삭제 대상)
+  const idsToDelete = new Set<string>()
+  const newRows = incomingPartRows.map((r) => {
+    const nextModuleKey = normalizeName(r.상품명)
+    const nextColorKey = normalizeName(r.색상)
+
+    const matched =
+      existingPool.find(
+        (p) =>
+          normalizeName(p.module_name) === nextModuleKey &&
+          normalizeName(p.color_name) === nextColorKey,
+      ) ??
+      existingPool.find((p) => p.part_code === r.품목코드)
+
+    if (matched) idsToDelete.add(matched.id)
+
+    return {
       module_name: r.상품명,
       color_name: r.색상,
       part_code: r.품목코드,
@@ -232,68 +246,29 @@ export async function POST(req: NextRequest) {
       material_type: normalizeMaterial(r.재질),
       is_active: true,
     }
+  })
 
-    const targetColorKey = normalizeName(next.color_name)
-    const targetModuleNameKey = normalizeName(next.module_name)
-
-    // 1순위: (module_name + color_name) 정확 일치
-    const matchedByName = partsPool.find(
-      (p) =>
-        normalizeName(p.module_name) === targetModuleNameKey &&
-        normalizeName(p.color_name) === targetColorKey,
-    ) ?? null
-
-    // 2순위: part_code 정확 일치 (이름이 바뀐 경우 대비)
-    const matchedByCode = !matchedByName
-      ? (partsPool.find((p) => p.part_code === next.part_code) ?? null)
-      : null
-
-    const matched = matchedByName ?? matchedByCode
-
-    if (matched) {
-      const { error: updateErr } = await supabase
-        .from('module_parts')
-        .update(next)
-        .eq('id', matched.id)
-      if (updateErr) {
-        notFound.push(
-          `부품 업데이트 실패: ${next.module_name} / ${next.color_name} (${next.part_code})`,
-        )
-        continue
-      }
-
-      partsUpdated++
-      const idx = partsPool.findIndex((p) => p.id === matched.id)
-      if (idx !== -1) {
-        partsPool[idx] = { ...partsPool[idx], ...next }
-      }
-      continue
-    }
-
-    const { data: insertedPart, error: insertErr } = await supabase
+  // 매칭된 기존 행 일괄 삭제
+  if (idsToDelete.size > 0) {
+    const { error: delErr } = await supabase
       .from('module_parts')
-      .insert(next)
-      .select('id, module_name, color_name, part_code, part_name, category, material_type')
-      .single()
-    if (insertErr || !insertedPart) {
-      notFound.push(
-        `부품 생성 실패: ${next.module_name} / ${next.color_name} (${next.part_code})`,
-      )
-      continue
-    }
-
-    partsPool.push(insertedPart)
-    partsInserted++
+      .delete()
+      .in('id', [...idsToDelete])
+    if (delErr) throw delErr
   }
 
-  partsUpserted = partsUpdated + partsInserted
+  // 새 행 일괄 삽입
+  const { error: insertErr, count } = await supabase
+    .from('module_parts')
+    .insert(newRows, { count: 'exact' })
+  if (insertErr) throw insertErr
+
+  partsUpserted = count ?? newRows.length
 
   return NextResponse.json({
     framesUpdated,
     boxesUpdated,
     partsUpserted,
-    partsUpdated,
-    partsInserted,
     notFound,
   })
 }

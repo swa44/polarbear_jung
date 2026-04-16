@@ -9,6 +9,7 @@ type SendShippingAlimtalkInput = {
   to: string
   trackingCompany: string
   trackingNumber: string
+  quoteUrl: string
 }
 
 const API_URL = process.env.BIZGO_API_URL
@@ -113,9 +114,13 @@ export async function sendQuoteAlimtalk(input: SendQuoteAlimtalkInput): Promise<
 export async function sendShippingAlimtalk(input: SendShippingAlimtalkInput): Promise<boolean> {
   if (!API_URL || !API_KEY || !ALIMTALK_SENDER_KEY) {
     console.error('[Alimtalk Skip] Missing env for shipping alimtalk')
-    console.log('[Alimtalk Skip] to:', input.to, 'tracking:', input.trackingCompany, input.trackingNumber)
+    console.log('[Alimtalk Skip] to:', input.to, 'url:', input.quoteUrl)
     return false
   }
+
+  // 기존 견적서 알림톡과 동일: 템플릿 버튼 URL이 https://#{배송조회링크} 형태이므로
+  // replaceWords 값에서 https:// 스킴 제거
+  const urlForTemplate = input.quoteUrl.replace(/^https?:\/\//, '')
 
   const payload = {
     messageFlow: [
@@ -131,15 +136,14 @@ export async function sendShippingAlimtalk(input: SendShippingAlimtalkInput): Pr
       {
         to: input.to,
         replaceWords: {
-          택배사: input.trackingCompany,
-          송장번호: input.trackingNumber,
+          배송조회링크: urlForTemplate,
         },
       },
     ],
   }
 
   try {
-    console.log('[Alimtalk Send] shipping to:', input.to, 'tracking:', input.trackingCompany, input.trackingNumber)
+    console.log('[Alimtalk Send] shipping to:', input.to, 'url:', input.quoteUrl)
     const res = await fetch(API_URL, {
       method: 'POST',
       headers: {

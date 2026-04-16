@@ -3,8 +3,6 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { ORDER_STATUS_LABEL } from '@/lib/utils'
 import { checkAdminAuth } from '@/lib/admin-auth'
 import { sendShippingAlimtalk } from '@/lib/alimtalk'
-import { readFile } from 'fs/promises'
-import path from 'path'
 
 type OrderModule = {
   module_name: string
@@ -83,7 +81,7 @@ export async function GET(req: NextRequest) {
       })
     }
     if (format === 'picking_csv') {
-      const bomRows = await readPickingBomMap()
+      const bomRows = await readPickingBomMapFromDb()
       const csv = generatePickingCsv((data || []) as OrderForExport[], bomRows)
       return new NextResponse(csv, {
         headers: {
@@ -128,11 +126,15 @@ export async function PATCH(req: NextRequest) {
 
     if (error) throw error
 
-    if (status === 'shipped' && data.customer_phone && tracking_company && tracking_number) {
+    if (status === 'shipped' && data.customer_phone && data.quote_token) {
+      const siteBase = (process.env.NEXT_PUBLIC_SITE_URL ?? '').replace(/\/$/, '')
+        || `${req.headers.get('x-forwarded-proto') ?? 'https'}://${req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? ''}`
+      const quoteUrl = `${siteBase}/quotes/${data.quote_token}`
       sendShippingAlimtalk({
         to: data.customer_phone,
-        trackingCompany: tracking_company,
-        trackingNumber: tracking_number,
+        trackingCompany: tracking_company ?? '',
+        trackingNumber: tracking_number ?? '',
+        quoteUrl,
       }).catch((e) => console.error('[Shipping alimtalk error]', e))
     }
 
@@ -180,53 +182,22 @@ function generateCsv(orders: OrderForExport[]): string {
   return BOM + [headers.join(','), ...rows].join('\n')
 }
 
-async function readPickingBomMap(): Promise<BomRow[]> {
-  const csvPath = path.join(process.cwd(), 'picking_bom_map.csv')
-  const raw = await readFile(csvPath, 'utf8')
-  const rows = parseCsv(raw)
+async function readPickingBomMapFromDb(): Promise<BomRow[]> {
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('module_parts')
+    .select('module_name, color_name, part_code, part_name')
+    .eq('is_active', true)
 
-  // 첫 번째 행이 병합 헤더(Column1, Column2...)인 경우 건너뜀
-  // 실제 컬럼명(상품명, 재질, 색상...)이 있는 행을 헤더로 사용
-  let headerRowIdx = 0
-  for (let i = 0; i < Math.min(rows.length, 3); i += 1) {
-    if (rows[i].map((v) => v.trim()).includes('상품명')) {
-      headerRowIdx = i
-      break
-    }
-  }
+  if (error) throw error
+  if (!data || data.length === 0) throw new Error('module_parts 데이터가 없습니다. BOM CSV를 먼저 업로드해주세요.')
 
-  if (rows.length <= headerRowIdx + 1) {
-    throw new Error('picking_bom_map.csv에 데이터가 없습니다.')
-  }
-
-  const header = rows[headerRowIdx].map((v) => v.trim())
-  const colProductName = header.indexOf('상품명')
-  const colColor = header.indexOf('색상')
-  const colItemCode = header.indexOf('품목코드')
-  const colItemName = header.indexOf('제품명')
-
-  if (colProductName === -1 || colColor === -1 || colItemCode === -1 || colItemName === -1) {
-    throw new Error(
-      `picking_bom_map.csv에 필수 컬럼이 없습니다. 필요: 상품명, 색상, 품목코드, 제품명`
-    )
-  }
-
-  const bomRows: BomRow[] = []
-  for (let i = headerRowIdx + 1; i < rows.length; i += 1) {
-    const cols = rows[i].map((v) => v.trim())
-    const productName = cols[colProductName] ?? ''
-    const color = cols[colColor] ?? ''
-    const itemCode = cols[colItemCode] ?? ''
-    const itemName = cols[colItemName] ?? ''
-    if (!productName || !itemCode || !itemName) continue
-    bomRows.push({ productName, color, itemCode, itemName })
-  }
-
-  if (bomRows.length === 0) {
-    throw new Error('picking_bom_map.csv에 유효한 데이터 행이 없습니다.')
-  }
-
-  return bomRows
+  return data.map((p) => ({
+    productName: p.module_name,
+    color: p.color_name ?? '',
+    itemCode: p.part_code,
+    itemName: p.part_name,
+  }))
 }
 
 function generatePickingCsv(orders: OrderForExport[], bomRows: BomRow[]): string {
@@ -428,49 +399,4 @@ function parseEmbeddedBoxName(value: string): { name: string; qty: number } | nu
     name: match[1].trim(),
     qty: Number.isFinite(qty) ? qty : 0,
   }
-}
-
-function parseCsv(content: string): string[][] {
-  const text = content.replace(/^\uFEFF/, '')
-  const rows: string[][] = []
-  let row: string[] = []
-  let current = ''
-  let inQuotes = false
-
-  for (let i = 0; i < text.length; i += 1) {
-    const ch = text[i]
-    const next = text[i + 1]
-
-    if (ch === '"') {
-      if (inQuotes && next === '"') {
-        current += '"'
-        i += 1
-      } else {
-        inQuotes = !inQuotes
-      }
-      continue
-    }
-
-    if (ch === ',' && !inQuotes) {
-      row.push(current)
-      current = ''
-      continue
-    }
-
-    if ((ch === '\n' || ch === '\r') && !inQuotes) {
-      if (ch === '\r' && next === '\n') i += 1
-      row.push(current)
-      const hasData = row.some((cell) => cell.trim() !== '')
-      if (hasData) rows.push(row)
-      row = []
-      current = ''
-      continue
-    }
-
-    current += ch
-  }
-
-  row.push(current)
-  if (row.some((cell) => cell.trim() !== '')) rows.push(row)
-  return rows
 }
