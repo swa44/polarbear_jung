@@ -94,20 +94,19 @@ function OrdersContent() {
                       <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
                     )}
                   </div>
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {order.order_items?.slice(0, 2).map((item) => (
-                      <span key={item.id} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md">
-                        {item.gang_count}구 {item.frame_color_name} ×{item.quantity}
-                      </span>
-                    ))}
-                    {(order.order_items?.length || 0) > 2 && (
-                      <span className="text-xs text-gray-400">+{order.order_items!.length - 2}개</span>
-                    )}
-                  </div>
                 </div>
 
                 {isExpanded && (
                   <div className="border-t border-gray-100 px-4 py-3 flex flex-col gap-3">
+                    {order.order_items && order.order_items.length > 0 && (
+                      <div className="flex flex-col gap-1">
+                        {order.order_items.map((item) => (
+                          <span key={item.id} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md">
+                            {item.gang_count}구 · {item.frame_color_name} × {item.quantity}개
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <div>
                       {order.quote_expires_at && (
                         <>
