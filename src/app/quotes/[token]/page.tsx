@@ -47,6 +47,7 @@ export default function QuotePage() {
   const [shippingFormOpen, setShippingFormOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [trackingCopied, setTrackingCopied] = useState(false);
+  const [showReturnNotice, setShowReturnNotice] = useState(false);
 
   const [recipientName, setRecipientName] = useState("");
   const [receiverPhone, setReceiverPhone] = useState("");
@@ -420,11 +421,23 @@ export default function QuotePage() {
             })}
           </div>
 
-          <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
-            <span className="text-sm text-gray-500">총 견적 금액</span>
-            <span className="text-lg font-bold text-gray-900">
-              {formatPrice(quote.total_price)}
-            </span>
+          <div className="flex flex-col gap-1.5 mt-4 pt-3 border-t border-gray-100">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500">상품 금액</span>
+              <span className="text-sm text-gray-700">
+                {formatPrice(quote.total_price)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500">배송비</span>
+              <span className="text-sm text-gray-700">{formatPrice(3000)}</span>
+            </div>
+            <div className="flex items-center justify-between pt-1.5 border-t border-gray-100">
+              <span className="text-sm text-gray-500">합계</span>
+              <span className="text-lg font-bold text-gray-900">
+                {formatPrice(quote.total_price + 3000)}
+              </span>
+            </div>
           </div>
         </section>
 
@@ -470,8 +483,8 @@ export default function QuotePage() {
         {!(quote.tracking_company && quote.tracking_number) && (
           <section className="bg-red-50 rounded-2xl border border-gray-300 p-5">
             <p className="text-sm text-red-600">
-              ･견적서 유효기간 내 배송요청이 없을 경우,<br></br> &nbsp;&nbsp;해당
-              주문서는 삭제됩니다.
+              ･견적서 유효기간 내 배송요청이 없을 경우,<br></br>{" "}
+              &nbsp;&nbsp;해당 주문서는 삭제됩니다.
             </p>
             <p className="text-sm text-red-600 mt-1">
               ･배송요청이 접수된 견적서는 <br></br> &nbsp;&nbsp;자료증빙을 위해
@@ -548,7 +561,7 @@ export default function QuotePage() {
 
             {shippingFormOpen && (
               <Button
-                onClick={handleSubmitShipping}
+                onClick={() => setShowReturnNotice(true)}
                 loading={saving}
                 fullWidth
                 size="lg"
@@ -560,6 +573,50 @@ export default function QuotePage() {
           </section>
         )}
       </div>
+
+      {showReturnNotice && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/40 z-50"
+            onClick={() => setShowReturnNotice(false)}
+          />
+          <div className="fixed inset-x-6 top-1/2 -translate-y-1/2 z-50 max-w-sm mx-auto bg-white rounded-2xl shadow-xl p-6 flex flex-col gap-4">
+            <h2 className="text-base font-bold text-gray-900">안내</h2>
+            <p className="text-md text-gray-700 leading-relaxed text-center">
+              해당 제품은 개별 포장이 되어있는 제품으로
+              <br />
+              개봉 후 단순변심등의 이유로는 <br />
+              반품이 되지 않습니다.
+              <br />
+              <br />
+              <p className="font-bold text-red-600">
+                반드시, 제품 수령 후 <br />
+                품목 확인하시고 개봉해주세요.
+              </p>
+            </p>
+            <div className="flex flex-col gap-2 pt-1">
+              <Button
+                onClick={() => {
+                  setShowReturnNotice(false);
+                  handleSubmitShipping();
+                }}
+                loading={saving}
+                fullWidth
+                size="lg"
+              >
+                확인했습니다.
+              </Button>
+              <Button
+                onClick={() => setShowReturnNotice(false)}
+                variant="ghost"
+                fullWidth
+              >
+                취소
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
