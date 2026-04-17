@@ -124,8 +124,18 @@ export default function BuildPage() {
   }, [allParts]);
 
   // 현재 색상의 모듈 목록 (module_parts에서 고유 module_name 추출)
+  // max_gang이 설정된 모듈은 해당 구수에서만 표시
   const availableModules = useMemo<ModuleOption[]>(() => {
     if (!selectedColor) return [];
+
+    // modules 테이블에서 max_gang 맵 구성 (name → max_gang)
+    const maxGangMap = new Map<string, number | null>();
+    for (const mod of products?.modules ?? []) {
+      if (mod.frame_color_id === selectedColor.id) {
+        maxGangMap.set(mod.name, mod.max_gang ?? null);
+      }
+    }
+
     const seen = new Set<string>();
     const result: ModuleOption[] = [];
     for (const p of allParts) {
@@ -136,6 +146,11 @@ export default function BuildPage() {
       if (!matches) continue;
       if (FRAME_NAMES.has(p.module_name)) continue;
       if (seen.has(p.module_name)) continue;
+
+      // max_gang 필터: 설정된 경우 현재 gangCount와 일치할 때만 포함
+      const maxGang = maxGangMap.get(p.module_name) ?? null;
+      if (maxGang !== null && maxGang !== gangCount) continue;
+
       const totalPrice = allParts
         .filter((mp) => mp.module_name === p.module_name && mp.color_name === p.color_name)
         .reduce((s, mp) => s + mp.price, 0);
@@ -143,7 +158,7 @@ export default function BuildPage() {
       result.push({ name: p.module_name, category: (p.category as ModuleCategory) ?? '기타류', price: totalPrice });
     }
     return result;
-  }, [allParts, selectedColor]);
+  }, [allParts, selectedColor, gangCount, products?.modules]);
 
   const moduleImageByKey = useMemo(() => {
     const map: Record<string, string> = {};

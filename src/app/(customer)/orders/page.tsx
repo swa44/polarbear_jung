@@ -99,12 +99,32 @@ function OrdersContent() {
                 {isExpanded && (
                   <div className="border-t border-gray-100 px-4 py-3 flex flex-col gap-3">
                     {order.order_items && order.order_items.length > 0 && (
-                      <div className="flex flex-col gap-1">
-                        {order.order_items.map((item) => (
-                          <span key={item.id} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md">
-                            {item.gang_count}구 · {item.frame_color_name} × {item.quantity}개
-                          </span>
-                        ))}
+                      <div className="flex flex-col gap-1.5">
+                        {order.order_items.map((item) => {
+                          const isSet = item.modules && item.modules.length > 0
+                          return (
+                            <div key={item.id} className="bg-gray-50 rounded-lg px-2.5 py-1.5">
+                              {isSet ? (
+                                <>
+                                  <p className="text-xs font-medium text-gray-700">
+                                    세트 · {item.gang_count}구 {item.frame_color_name} × {item.quantity}개
+                                  </p>
+                                  <div className="mt-0.5 flex flex-col gap-0.5">
+                                    {item.modules.map((m, i) => (
+                                      <p key={i} className="text-xs text-gray-500 pl-1">
+                                        {m.slot ?? i + 1}: {m.module_name}
+                                      </p>
+                                    ))}
+                                  </div>
+                                </>
+                              ) : (
+                                <p className="text-xs text-gray-600">
+                                  낱개부품 · {item.frame_color_name} × {item.quantity}개
+                                </p>
+                              )}
+                            </div>
+                          )
+                        })}
                       </div>
                     )}
                     <div>

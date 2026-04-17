@@ -9,9 +9,9 @@ export default function AdminSettingsPage() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [result, setResult] = useState<{
     framesUpdated: number
+    modulesAdded: number
+    boxesUpdated: number
     partsUpserted: number
-    modulesUpdated?: number
-    boxesUpdated?: number
     notFound: string[]
   } | null>(null)
   const [errorMsg, setErrorMsg] = useState('')
@@ -52,11 +52,13 @@ export default function AdminSettingsPage() {
 
       <div className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col gap-4">
         <div>
-          <p className="text-sm font-semibold text-gray-900 mb-1">BOM 가격 일괄 업데이트</p>
+          <p className="text-sm font-semibold text-gray-900 mb-1">상품 일괄 가져오기 (CSV)</p>
           <p className="text-xs text-gray-400">
-            picking_bom_map.csv에 가격 컬럼을 추가한 파일을 업로드하세요.
+            상품명, 색상, 품목코드, 제품명, 단가, 카테고리, 재질 컬럼이 있는 CSV를 업로드하세요.
             <br />
-            상품명+색상이 같은 행의 가격을 합산해 모듈 가격을 업데이트합니다.
+            카테고리에 따라 프레임 / 모듈 / 매립박스로 자동 분류됩니다.
+            <br />
+            같은 상품명의 여러 행은 낱개 부품으로 처리되며 가격이 합산됩니다.
           </p>
         </div>
 
@@ -72,23 +74,21 @@ export default function AdminSettingsPage() {
           disabled={status === 'loading'}
           className="py-2 rounded-xl bg-gray-900 text-white text-sm font-semibold disabled:opacity-50"
         >
-          {status === 'loading' ? '처리 중...' : '가격 업데이트'}
+          {status === 'loading' ? '처리 중...' : '가져오기'}
         </button>
 
         {status === 'done' && result && (
           <div className="rounded-xl bg-green-50 border border-green-100 p-3 text-sm flex flex-col gap-1">
-            <p className="font-semibold text-green-700">✓ 업데이트 완료</p>
+            <p className="font-semibold text-green-700">완료</p>
             <p className="text-xs text-green-600">프레임 색상: {result.framesUpdated}건</p>
-            {typeof result.boxesUpdated === 'number' && (
-              <p className="text-xs text-green-600">매립박스: {result.boxesUpdated}건</p>
-            )}
-            <p className="text-xs text-green-600">부품(module_parts): {result.partsUpserted}건</p>
-            {typeof result.modulesUpdated === 'number' && (
-              <p className="text-xs text-green-600">모듈 합산가격: {result.modulesUpdated}건</p>
-            )}
+            <p className="text-xs text-green-600">모듈: {result.modulesAdded}건</p>
+            <p className="text-xs text-green-600">매립박스: {result.boxesUpdated}건</p>
+            <p className="text-xs text-green-600">낱개부품(module_parts): {result.partsUpserted}건</p>
             {result.notFound.length > 0 && (
               <div className="mt-1">
-                <p className="text-xs text-orange-600 font-medium mb-1">매칭 실패 ({result.notFound.length}건)</p>
+                <p className="text-xs text-orange-600 font-medium mb-1">
+                  처리 실패 ({result.notFound.length}건)
+                </p>
                 <ul className="text-xs text-orange-500 space-y-0.5">
                   {result.notFound.map((msg, i) => (
                     <li key={i}>· {msg}</li>
