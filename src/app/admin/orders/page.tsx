@@ -84,6 +84,21 @@ export default function AdminOrdersPage() {
     setSavingId(null)
   }
 
+  const handleUpdateTracking = async (id: string) => {
+    setSavingId(id)
+    await fetch('/api/admin/orders', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id,
+        tracking_number: editTracking[id],
+        tracking_company: editTrackingCompany[id],
+      }),
+    })
+    await fetchOrders()
+    setSavingId(null)
+  }
+
   const handleShip = async (id: string) => {
     if (!editTracking[id]?.trim()) {
       alert('송장번호를 입력해주세요.')
@@ -290,13 +305,23 @@ export default function AdminOrdersPage() {
                           onChange={(e) => setEditTracking((prev) => ({ ...prev, [order.id]: e.target.value }))}
                           className="px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-gray-900"
                         />
-                        {order.status !== 'shipped' && order.status === 'paid' && (
+                        {order.status === 'paid' && (
                           <Button
                             size="sm"
                             loading={savingId === order.id}
                             onClick={() => handleShip(order.id)}
                           >
                             출고 처리
+                          </Button>
+                        )}
+                        {order.status === 'shipped' && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            loading={savingId === order.id}
+                            onClick={() => handleUpdateTracking(order.id)}
+                          >
+                            수정
                           </Button>
                         )}
                       </div>
