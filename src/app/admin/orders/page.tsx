@@ -228,24 +228,34 @@ export default function AdminOrdersPage() {
                   <div className="border-t border-gray-100 px-4 py-4 flex flex-col gap-4">
                     <div>
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">견적 상품</p>
-                      {order.order_items?.map((item) => (
+                      {order.order_items?.map((item) => {
+                        const isSingle = !item.frame_color_id || item.modules.length === 0
+                        return (
                         <div key={item.id} className="text-sm py-2 border-b border-gray-100 last:border-0">
-                          <p className="font-medium text-gray-900">
-                            {item.gang_count}구 · {item.frame_color_name} × {item.quantity}개
-                          </p>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {item.modules.map((m, i) => (
-                              <span key={i} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
-                                {i + 1}번: {m.module_name}
-                              </span>
-                            ))}
-                          </div>
-                          {item.embedded_box_name && (
-                            <p className="text-xs text-gray-400 mt-0.5">매립박스: {item.embedded_box_name}</p>
+                          {isSingle ? (
+                            <p className="font-medium text-gray-900">
+                              낱개부품 · {item.frame_color_name} × {item.quantity}개
+                            </p>
+                          ) : (
+                            <>
+                              <p className="font-medium text-gray-900">
+                                세트 · {item.gang_count}구 {item.frame_color_name} × {item.quantity}개
+                              </p>
+                              <div className="mt-1 space-y-0.5">
+                                {item.modules.map((m, i) => (
+                                  <p key={i} className="text-xs text-gray-600">
+                                    {i + 1}: {m.module_name}
+                                  </p>
+                                ))}
+                              </div>
+                              {item.embedded_box_name && (
+                                <p className="text-xs text-gray-400 mt-0.5">매립박스: {item.embedded_box_name}</p>
+                              )}
+                            </>
                           )}
-                          <p className="text-xs text-gray-500 mt-1">{formatPrice(item.total_price)}</p>
                         </div>
-                      ))}
+                        )
+                      })}
                     </div>
 
                     <div>
