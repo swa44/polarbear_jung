@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 
 export default function AdminSettingsPage() {
   const fileRef = useRef<HTMLInputElement>(null)
@@ -15,6 +15,55 @@ export default function AdminSettingsPage() {
     notFound: string[]
   } | null>(null)
   const [errorMsg, setErrorMsg] = useState('')
+
+  // 관리자 알림 번호 상태
+  const [notifyPhones, setNotifyPhones] = useState<string[]>([])
+  const [newPhone, setNewPhone] = useState('')
+  const [phonesSaving, setPhonesSaving] = useState(false)
+  const [phonesSaved, setPhonesSaved] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/admin/settings')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.admin_notify_phones) {
+          setNotifyPhones(
+            data.admin_notify_phones
+              .split(',')
+              .map((p: string) => p.trim())
+              .filter(Boolean)
+          )
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  const savePhones = async (phones: string[]) => {
+    setPhonesSaving(true)
+    await fetch('/api/admin/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ admin_notify_phones: phones.join(',') }),
+    })
+    setPhonesSaving(false)
+    setPhonesSaved(true)
+    setTimeout(() => setPhonesSaved(false), 2000)
+  }
+
+  const handleAddPhone = async () => {
+    const phone = newPhone.trim().replace(/[^0-9]/g, '')
+    if (!phone || notifyPhones.includes(phone)) return
+    const next = [...notifyPhones, phone]
+    setNotifyPhones(next)
+    setNewPhone('')
+    await savePhones(next)
+  }
+
+  const handleRemovePhone = async (phone: string) => {
+    const next = notifyPhones.filter((p) => p !== phone)
+    setNotifyPhones(next)
+    await savePhones(next)
+  }
 
   const handleImport = async () => {
     const file = fileRef.current?.files?.[0]
@@ -47,9 +96,54 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <div className="max-w-md">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">설정</h1>
+    <div className="max-w-md flex flex-col gap-6">
+      <h1 className="text-2xl font-bold text-gray-900">설정</h1>
 
+      {/* 관리자 알림 번호 */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col gap-4">
+        <div>
+          <p className="text-sm font-semibold text-gray-900 mb-1">관리자 알림 번호</p>
+          <p className="text-xs text-gray-400">
+            배송정보 입력 후 입금 대기 상태가 되면 등록된 번호로 카카오 알림톡이 발송됩니다.
+          </p>
+        </div>
+
+        {notifyPhones.length > 0 && (
+          <ul className="flex flex-col gap-2">
+            {notifyPhones.map((phone) => (
+              <li key={phone} className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 text-sm">
+                <span className="font-mono text-gray-800">{phone}</span>
+                <button
+                  onClick={() => handleRemovePhone(phone)}
+                  className="text-xs text-red-400 hover:text-red-600 font-medium ml-3"
+                >
+                  삭제
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="flex gap-2">
+          <input
+            type="tel"
+            placeholder="번호 입력 (예: 01012345678)"
+            value={newPhone}
+            onChange={(e) => setNewPhone(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddPhone()}
+            className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-gray-900"
+          />
+          <button
+            onClick={handleAddPhone}
+            disabled={phonesSaving}
+            className="px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-semibold disabled:opacity-50"
+          >
+            {phonesSaving ? '저장 중...' : phonesSaved ? '저장됨' : '추가'}
+          </button>
+        </div>
+      </div>
+
+      {/* 상품 일괄 가져오기 */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col gap-4">
         <div>
           <p className="text-sm font-semibold text-gray-900 mb-1">상품 일괄 가져오기 (CSV)</p>

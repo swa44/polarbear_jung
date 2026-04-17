@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { sendOrderNotifyAlimtalk } from '@/lib/alimtalk'
 
 function getBankInfo() {
   return {
@@ -105,6 +106,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       .eq('id', quote.id)
 
     if (updateError) throw updateError
+
+    // 관리자 알림톡 발송 (비동기, 실패해도 응답에 영향 없음)
+    const supabaseForSettings = createServiceClient()
+    const { data: settingsData } = await supabaseForSettings
+      .from('settings')
+      .select('value')
+      .eq('key', 'admin_notify_phones')
+      .single()
+    if (settingsData?.value) {
+      const phones = settingsData.value
+        .split(',')
+        .map((p: string) => p.trim())
+        .filter(Boolean)
+      sendOrderNotifyAlimtalk(phones).catch((e) => console.error('[Order notify alimtalk error]', e))
+    }
 
     return NextResponse.json({ success: true })
   } catch (e) {
