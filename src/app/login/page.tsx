@@ -19,6 +19,11 @@ export default function LoginPage() {
   const clearSession = useSessionStore((s) => s.clearSession);
 
   const [step, setStep] = useState<Step>("info");
+  const [imgIndex, setImgIndex] = useState(0);
+  const IMAGES = Array.from(
+    { length: 10 },
+    (_, i) => `/main_images/jung_${i + 1}.webp`,
+  );
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
@@ -27,6 +32,13 @@ export default function LoginPage() {
   const [confirmName, setConfirmName] = useState("");
   const [editingConfirmName, setEditingConfirmName] = useState(false);
   const [restoring, setRestoring] = useState(true);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setImgIndex((prev) => (prev + 1) % IMAGES.length);
+    }, 1500);
+    return () => clearInterval(timer);
+  }, [IMAGES.length]);
 
   useEffect(() => {
     let cancelled = false;
@@ -196,10 +208,23 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
+        {/* Image Slideshow */}
+        <div className="relative w-48 h-48 mb-6 rounded-2xl overflow-hidden bg-gray-100 mx-auto">
+          {IMAGES.map((src, i) => (
+            <img
+              key={src}
+              src={src}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000"
+              style={{ opacity: i === imgIndex ? 1 : 0 }}
+            />
+          ))}
+        </div>
+
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-            맞춤형 융스위치 견적 시스템
+            JUNG SWITCH<br></br> 실시간 견적 시스템
           </h1>
           <p className="mt-2 text-gray-500 text-sm">주식회사 폴라베어</p>
         </div>

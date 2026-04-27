@@ -3,7 +3,7 @@ import "./globals.css";
 import PWARegister from "@/components/pwa/PWARegister";
 
 export const metadata: Metadata = {
-  title: "폴라베어 융스위치",
+  title: "융스위치 실시간 견적 시스템",
   description: "원하는 구성으로 스위치를 직접 설계하고 견적을 요청하세요.",
   applicationName: "융스위치",
   manifest: "/manifest.json",
