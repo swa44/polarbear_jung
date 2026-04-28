@@ -152,7 +152,7 @@ export default function BuildPage() {
       if (maxGang !== null && maxGang !== gangCount) continue;
 
       const totalPrice = allParts
-        .filter((mp) => mp.module_name === p.module_name && mp.color_name === p.color_name)
+        .filter((mp) => mp.module_name === p.module_name && mp.color_name === selectedColor.name)
         .reduce((s, mp) => s + mp.price, 0);
       seen.add(p.module_name);
       result.push({ name: p.module_name, category: (p.category as ModuleCategory) ?? '기타류', price: totalPrice });

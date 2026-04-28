@@ -421,24 +421,35 @@ export default function QuotePage() {
             })}
           </div>
 
-          <div className="flex flex-col gap-1.5 mt-4 pt-3 border-t border-gray-100">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500">상품 금액</span>
-              <span className="text-sm text-gray-700">
-                {formatPrice(quote.total_price)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500">배송비</span>
-              <span className="text-sm text-gray-700">{formatPrice(3000)}</span>
-            </div>
-            <div className="flex items-center justify-between pt-1.5 border-t border-gray-100">
-              <span className="text-sm text-gray-500">합계</span>
-              <span className="text-lg font-bold text-gray-900">
-                {formatPrice(quote.total_price + 3000)}
-              </span>
-            </div>
-          </div>
+          {(() => {
+            const discountedProduct = Math.round((quote.total_price * 0.625) / 10) * 10;
+            const discountAmount = quote.total_price - discountedProduct;
+            const finalPrice = discountedProduct + 3000;
+            return (
+              <div className="flex flex-col gap-1.5 mt-4 pt-3 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">상품 금액</span>
+                  <span className="text-sm text-gray-700">
+                    {formatPrice(quote.total_price)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-red-500">폴라베어 특별 프로모션</span>
+                  <span className="text-sm font-medium text-red-500">-{formatPrice(discountAmount)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">배송비</span>
+                  <span className="text-sm text-gray-700">{formatPrice(3000)}</span>
+                </div>
+                <div className="flex items-center justify-between pt-1.5 border-t border-gray-100">
+                  <span className="text-sm text-gray-500">최종 금액</span>
+                  <span className="text-lg font-bold text-gray-900">
+                    {formatPrice(finalPrice)}
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
         </section>
 
         {quote.tracking_company && quote.tracking_number && (
