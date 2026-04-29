@@ -24,6 +24,10 @@ export default function LoginPage() {
     { length: 10 },
     (_, i) => `/main_images/jung_${i + 1}.webp`,
   );
+  const LUCCI_IMAGES = Array.from(
+    { length: 6 },
+    (_, i) => `/lucciair/main_images/lucci_${i + 1}.webp`,
+  );
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
@@ -209,24 +213,47 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         {/* Image Slideshow */}
-        <div className="relative w-48 h-48 mb-6 rounded-2xl overflow-hidden bg-gray-100 mx-auto">
-          {IMAGES.map((src, i) => (
-            <img
-              key={src}
-              src={src}
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000"
-              style={{ opacity: i === imgIndex ? 1 : 0 }}
-            />
-          ))}
+        <div className="flex justify-center gap-4 mb-6">
+          {/* JUNG Slideshow */}
+          <div className="relative w-40 h-40 rounded-2xl overflow-hidden bg-gray-100 shadow-sm">
+            {IMAGES.map((src, i) => (
+              <img
+                key={src}
+                src={src}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000"
+                style={{ opacity: i === imgIndex ? 1 : 0 }}
+              />
+            ))}
+          </div>
+          {/* LUCCIAIR Slideshow */}
+          <div className="relative w-40 h-40 rounded-2xl overflow-hidden bg-gray-100 shadow-sm">
+            {LUCCI_IMAGES.map((src, i) => (
+              <img
+                key={src}
+                src={src}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000"
+                style={{
+                  opacity: i === imgIndex % LUCCI_IMAGES.length ? 1 : 0,
+                }}
+              />
+            ))}
+          </div>
         </div>
 
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-            JUNG SWITCH<br></br> 실시간 견적 시스템
+            실시간 견적 시스템
           </h1>
-          <p className="mt-2 text-gray-500 text-sm">주식회사 폴라베어</p>
+          <p className="mt-0 text-gray-600 text-xl font-medium">
+            • JUNG SWITCH
+          </p>
+          <p className="mt-0 text-gray-600 text-xl font-medium ">
+            • LUCCIAIR 실링팬
+          </p>
+          <p className="mt-1 text-gray-500 text-sm">주식회사 폴라베어</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
@@ -244,8 +271,8 @@ export default function LoginPage() {
             </div>
           ) : step === "info" ? (
             <div className="flex flex-col gap-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                고객 정보 입력
+              <h2 className="text-md font-semibold text-gray-900 text-center">
+                로그인 후 이용 가능합니다.
               </h2>
               <Input
                 label="이름"
