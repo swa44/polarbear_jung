@@ -73,7 +73,7 @@ export default function LoginPage() {
         const data = await res.json();
         if (cancelled) return;
         setSession(data.name, data.phone);
-        router.replace("/build");
+        router.replace("/select");
       } catch {
         clearSession();
         if (!cancelled) {
@@ -155,7 +155,7 @@ export default function LoginPage() {
 
       setSession(data.name, data.phone);
       shouldUnlock = false;
-      router.push("/build");
+      router.push("/select");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "오류가 발생했습니다.");
     } finally {
@@ -185,7 +185,7 @@ export default function LoginPage() {
 
       setSession(data.name, data.phone);
       shouldUnlock = false;
-      router.push("/build");
+      router.push("/select");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "오류가 발생했습니다.");
     } finally {

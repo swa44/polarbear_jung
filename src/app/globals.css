@@ -20,6 +20,7 @@
     -webkit-tap-highlight-color: transparent;
   }
   body {
+    font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
     background-color: var(--color-gray-50);
     color: var(--color-gray-900);
   }

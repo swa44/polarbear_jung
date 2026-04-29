@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCartStore } from "@/store/cartStore";
 import { useSessionStore } from "@/store/sessionStore";
-import { LogOut, ShoppingCart, Package, Wrench, Boxes } from "lucide-react";
+import { LogOut, ShoppingCart, Package, Wrench, Boxes, ChevronLeft } from "lucide-react";
 import {
   clearStorefrontDataCache,
   warmStorefrontData,
@@ -29,17 +29,17 @@ export default function CustomerShell({
 
   useEffect(() => {
     warmStorefrontData();
-    router.prefetch("/build");
-    router.prefetch("/single");
-    router.prefetch("/cart");
-    router.prefetch("/orders");
+    router.prefetch("/jung/build");
+    router.prefetch("/jung/single");
+    router.prefetch("/jung/cart");
+    router.prefetch("/jung/orders");
   }, [router]);
 
   const navItems = [
-    { href: "/build", icon: Wrench, label: "세트견적" },
-    { href: "/single", icon: Boxes, label: "낱개부품" },
-    { href: "/cart", icon: ShoppingCart, label: "견적바구니" },
-    { href: "/orders", icon: Package, label: "My견적" },
+    { href: "/jung/build", icon: Wrench, label: "세트견적" },
+    { href: "/jung/single", icon: Boxes, label: "낱개부품" },
+    { href: "/jung/cart", icon: ShoppingCart, label: "견적바구니" },
+    { href: "/jung/orders", icon: Package, label: "My견적" },
   ];
 
   const handleLogout = async () => {
@@ -53,10 +53,10 @@ export default function CustomerShell({
 
   const handleNavPrefetch = () => {
     warmStorefrontData();
-    router.prefetch("/build");
-    router.prefetch("/single");
-    router.prefetch("/cart");
-    router.prefetch("/orders");
+    router.prefetch("/jung/build");
+    router.prefetch("/jung/single");
+    router.prefetch("/jung/cart");
+    router.prefetch("/jung/orders");
   };
 
   const handleNavClick = (href: string) => {
@@ -70,18 +70,23 @@ export default function CustomerShell({
     <div className="min-h-screen bg-gray-50 pb-20">
       <header className="sticky top-0 z-40 bg-white border-b border-gray-100">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
-          <Link
-            href="/build"
-            prefetch
-            onMouseEnter={handleNavPrefetch}
-            onTouchStart={handleNavPrefetch}
-            className="text-xl font-bold text-gray-900 tracking-tight"
-          >
-            융스위치
-          </Link>
+          <div className="flex items-center gap-1">
+            <Link href="/select" className="p-2 text-gray-500 hover:text-gray-900">
+              <ChevronLeft className="w-5 h-5" />
+            </Link>
+            <Link
+              href="/jung/build"
+              prefetch
+              onMouseEnter={handleNavPrefetch}
+              onTouchStart={handleNavPrefetch}
+              className="text-xl font-bold text-gray-900 tracking-tight"
+            >
+              JUNG 스위치
+            </Link>
+          </div>
           <div className="flex items-center gap-1">
             <Link
-              href="/cart"
+              href="/jung/cart"
               prefetch
               onMouseEnter={handleNavPrefetch}
               onTouchStart={handleNavPrefetch}
@@ -128,9 +133,12 @@ export default function CustomerShell({
               >
                 <div className="relative">
                   <Icon className="w-5 h-5" />
-                  {mounted && href === "/cart" && cartCount() > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-gray-900 text-white rounded-full w-5 h-5 flex items-center justify-center font-bold" style={{ fontSize: '11px', lineHeight: 1 }}>
-                      {cartCount() > 99 ? '99+' : cartCount()}
+                  {mounted && href === "/jung/cart" && cartCount() > 0 && (
+                    <span
+                      className="absolute -top-2 -right-2 bg-gray-900 text-white rounded-full w-5 h-5 flex items-center justify-center font-bold"
+                      style={{ fontSize: "11px", lineHeight: 1 }}
+                    >
+                      {cartCount() > 99 ? "99+" : cartCount()}
                     </span>
                   )}
                 </div>

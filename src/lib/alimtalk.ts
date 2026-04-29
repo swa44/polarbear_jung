@@ -149,6 +149,39 @@ export async function sendOrderNotifyAlimtalk(phones: string[]): Promise<void> {
   }
 }
 
+export async function sendFanOrderNotifyAlimtalk(phones: string[]): Promise<void> {
+  if (!API_URL || !API_KEY || !ALIMTALK_SENDER_KEY || phones.length === 0) return
+
+  const payload = {
+    messageFlow: [
+      {
+        alimtalk: {
+          senderKey: ALIMTALK_SENDER_KEY,
+          templateCode: 'ORDERLUCCIAIR',
+          sendType: 'template',
+        },
+      },
+    ],
+    destinations: phones.map((phone) => ({ to: phone })),
+  }
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: API_KEY },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) {
+      const body = await res.text().catch(() => '')
+      console.error('Fan order notify alimtalk failed:', res.status, body)
+    } else {
+      console.log('[Alimtalk Sent] fan order notify success')
+    }
+  } catch (e) {
+    console.error('Fan order notify alimtalk exception:', e)
+  }
+}
+
 export async function sendShippingAlimtalk(input: SendShippingAlimtalkInput): Promise<boolean> {
   if (!API_URL || !API_KEY || !ALIMTALK_SENDER_KEY) {
     console.error('[Alimtalk Skip] Missing env for shipping alimtalk')

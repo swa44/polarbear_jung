@@ -15,7 +15,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source:
-          '/:folder(colors|frames|modules|modules_set|inserts|boxes)/:path*',
+          '/:folder(colors|frames|modules|modules_set|inserts|boxes|fan)/:path*',
         headers: [
           {
             key: 'Cache-Control',

@@ -1,0 +1,120 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
+import Link from 'next/link'
+import { ClipboardList, Package, Settings, LogOut } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+
+export default function LucciairAdminLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  const supabase = createClient()
+
+  const [authed, setAuthed] = useState<boolean | null>(null)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setAuthed(!!session)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthed(!!session)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const handleLogin = async () => {
+    setLoading(true)
+    setError('')
+    const fullEmail = email.includes('@') ? email : `${email}@pbjung.com`
+    const { error } = await supabase.auth.signInWithPassword({ email: fullEmail, password })
+    setLoading(false)
+    if (error) setError('아이디 또는 비밀번호가 올바르지 않습니다.')
+  }
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+  }
+
+  if (authed === null) return null
+
+  if (!authed) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-sm bg-white rounded-2xl border border-gray-100 p-6 flex flex-col gap-4">
+          <h1 className="text-xl font-bold text-gray-900">관리자 로그인</h1>
+          <input
+            type="text"
+            placeholder="아이디"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:border-gray-900 text-sm"
+            autoFocus
+          />
+          <input
+            type="password"
+            placeholder="비밀번호"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:border-gray-900 text-sm"
+          />
+          {error && <p className="text-sm text-red-500">{error}</p>}
+          <button
+            onClick={handleLogin}
+            disabled={loading}
+            className="w-full py-3 bg-gray-900 text-white rounded-xl font-medium hover:bg-gray-700 disabled:opacity-50 transition-colors"
+          >
+            {loading ? '확인 중...' : '로그인'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const navItems = [
+    { href: '/lucciair_admin/orders', icon: ClipboardList, label: '견적관리' },
+    { href: '/lucciair_admin/products', icon: Package, label: '상품관리' },
+    { href: '/lucciair_admin/settings', icon: Settings, label: '설정' },
+  ]
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <header className="sticky top-0 z-40 bg-white border-b border-gray-100">
+        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
+          <span className="font-bold text-gray-900">루씨에어 관리자</span>
+          <div className="flex items-center gap-1">
+            {navItems.map(({ href, icon: Icon, label }) => (
+              <Link
+                key={href}
+                href={href}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  pathname.startsWith(href)
+                    ? 'bg-gray-900 text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {label}
+              </Link>
+            ))}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors ml-1"
+            >
+              <LogOut className="w-4 h-4" />
+              로그아웃
+            </button>
+          </div>
+        </div>
+      </header>
+      <main className="max-w-4xl mx-auto px-4 py-6">{children}</main>
+    </div>
+  )
+}
