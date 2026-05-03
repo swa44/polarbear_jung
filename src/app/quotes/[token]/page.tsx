@@ -494,16 +494,15 @@ export default function QuotePage() {
         {!(quote.tracking_company && quote.tracking_number) && (
           <section className="bg-red-50 rounded-2xl border border-gray-300 p-5">
             <p className="text-sm text-red-600">
-              ･견적서 유효기간 내 배송요청이 없을 경우,<br></br>{" "}
-              &nbsp;&nbsp;해당 주문서는 삭제됩니다.
+              ･ 구매를 원하시는 분은 배송 정보를 입력해주세요.<br />
+              &nbsp;&nbsp;&nbsp;확인 후 입금 및 제품 관련 연락 드리겠습니다.
             </p>
             <p className="text-sm text-red-600 mt-1">
-              ･배송요청이 접수된 견적서는 <br></br> &nbsp;&nbsp;자료증빙을 위해
-              저장됩니다.
+              ･ 견적서 유효기간 내 배송요청이 없을 경우,<br />
+              &nbsp;&nbsp;&nbsp;해당 주문서는 삭제됩니다.
             </p>
             <p className="text-sm text-red-600 mt-1">
-              ･입금 후 배송정보입력을 해주셔야 <br></br> &nbsp;&nbsp;출고가
-              진행됩니다.
+              ･ 추가 문의는 010-8434-8204 로 연락주세요.
             </p>
           </section>
         )}

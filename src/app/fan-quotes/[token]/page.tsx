@@ -150,6 +150,25 @@ export default function FanQuotePage() {
 
       <p className="text-xs text-gray-400">견적번호: {quote.order_number} · {formatDate(quote.created_at)}</p>
 
+      {/* 공급자 */}
+      <section className="bg-white rounded-2xl border border-gray-400 p-5">
+        <p className="text-md font-semibold text-gray-500 mb-2">공급자</p>
+        <div className="flex flex-col gap-1.5">
+          <div className="flex gap-2 text-md">
+            <span className="text-gray-500 w-20 shrink-0">상호명</span>
+            <span className="text-gray-800 font-medium">주식회사 폴라베어</span>
+          </div>
+          <div className="flex gap-2 text-md">
+            <span className="text-gray-500 w-20 shrink-0">등록번호</span>
+            <span className="text-gray-800">883-87-01986</span>
+          </div>
+          <div className="flex gap-2 text-md">
+            <span className="text-gray-500 w-20 shrink-0">소재지</span>
+            <span className="text-gray-800">대전 유성구 반석로 148 전면 1층</span>
+          </div>
+        </div>
+      </section>
+
       {/* 상품 목록 */}
       <section className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col gap-3">
         <p className="text-sm font-semibold text-gray-700">견적 상품</p>
@@ -225,9 +244,17 @@ export default function FanQuotePage() {
       {/* 안내문 */}
       {!(quote.tracking_company && quote.tracking_number) && (
         <section className="bg-red-50 rounded-2xl border border-gray-300 p-5">
-          <p className="text-sm text-red-600">･견적서 유효기간 내 배송요청이 없을 경우,<br />&nbsp;&nbsp;해당 주문서는 삭제됩니다.</p>
-          <p className="text-sm text-red-600 mt-1">･배송요청이 접수된 견적서는 <br />&nbsp;&nbsp;자료증빙을 위해 저장됩니다.</p>
-          <p className="text-sm text-red-600 mt-1">･입금 후 배송정보입력을 해주셔야 <br />&nbsp;&nbsp;출고가 진행됩니다.</p>
+          <p className="text-sm text-red-600">
+            ･ 구매를 원하시는 분은 배송 정보를 입력해주세요.<br />
+            &nbsp;&nbsp;&nbsp;확인 후 입금 및 제품 관련 연락 드리겠습니다.
+          </p>
+          <p className="text-sm text-red-600 mt-1">
+            ･ 견적서 유효기간 내 배송요청이 없을 경우,<br />
+            &nbsp;&nbsp;&nbsp;해당 주문서는 삭제됩니다.
+          </p>
+          <p className="text-sm text-red-600 mt-1">
+            ･ 추가 문의는 010-8434-8204 로 연락주세요.
+          </p>
         </section>
       )}
 
