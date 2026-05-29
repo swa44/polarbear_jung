@@ -510,30 +510,39 @@ export default function QuotePage() {
         {!(quote.tracking_company && quote.tracking_number) && (
           <section className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col gap-3">
             <h2 className="text-base font-bold text-gray-900">배송정보 입력</h2>
-            {!shippingFormOpen ? (
+            {quote.status === 'expired' && (
+              <p className="text-sm text-red-500">견적서 유효기간이 만료되어 배송정보를 입력할 수 없습니다.</p>
+            )}
+            {quote.status === 'cancelled' && (
+              <p className="text-sm text-red-500">취소된 견적서입니다.</p>
+            )}
+            {(quote.status === 'paid' || quote.status === 'shipped') && (
+              <p className="text-sm text-gray-500">이미 처리된 주문입니다.</p>
+            )}
+            {!shippingFormOpen && canSubmitShipping && !saved && (
               <Button
                 onClick={() => setShippingFormOpen(true)}
                 fullWidth
                 size="lg"
-                disabled={!canSubmitShipping || saved}
               >
                 배송정보 입력하기
               </Button>
-            ) : (
+            )}
+            {shippingFormOpen && (
               <>
                 <Input
                   label="수령인"
                   placeholder="수령인 이름"
                   value={recipientName}
                   onChange={(e) => setRecipientName(e.target.value)}
-                  disabled={!canSubmitShipping || saved}
+                  disabled={saved}
                 />
                 <Input
                   label="연락처"
                   placeholder="01012345678"
                   value={receiverPhone}
                   onChange={(e) => setReceiverPhone(e.target.value)}
-                  disabled={!canSubmitShipping || saved}
+                  disabled={saved}
                 />
                 <Input
                   label="주소"
@@ -542,7 +551,7 @@ export default function QuotePage() {
                   onClick={handleSearchAddress}
                   onChange={() => {}}
                   readOnly
-                  disabled={!postcodeReady || !canSubmitShipping || saved}
+                  disabled={!postcodeReady || saved}
                   className="cursor-pointer"
                 />
                 <Input
@@ -550,14 +559,14 @@ export default function QuotePage() {
                   placeholder="동/호수, 건물명"
                   value={shippingDetail}
                   onChange={(e) => setShippingDetail(e.target.value)}
-                  disabled={!canSubmitShipping || saved}
+                  disabled={saved}
                 />
                 <Input
                   label="배송메모 (선택)"
                   placeholder="부재시 경비실 보관 등"
                   value={shippingMemo}
                   onChange={(e) => setShippingMemo(e.target.value)}
-                  disabled={!canSubmitShipping || saved}
+                  disabled={saved}
                 />
               </>
             )}
@@ -569,13 +578,12 @@ export default function QuotePage() {
             )}
             {error && <p className="text-sm text-red-500">{error}</p>}
 
-            {shippingFormOpen && (
+            {shippingFormOpen && !saved && (
               <Button
                 onClick={() => setShowReturnNotice(true)}
                 loading={saving}
                 fullWidth
                 size="lg"
-                disabled={!canSubmitShipping || saved}
               >
                 배송정보 제출
               </Button>
