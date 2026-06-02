@@ -272,7 +272,7 @@ export default function LoginPage() {
           ) : step === "info" ? (
             <div className="flex flex-col gap-4">
               <h2 className="text-md font-semibold text-gray-900 text-center">
-                로그인 후 이용 가능합니다.
+                전화번호 인증을 하시면<br />회원가입 페이지로 이동합니다.
               </h2>
               <Input
                 label="이름"
